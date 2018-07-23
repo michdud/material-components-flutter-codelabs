@@ -14,7 +14,9 @@
 
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:scoped_model/scoped_model.dart';
 
+import '../model/app_state_model.dart';
 import '../model/product.dart';
 
 class ProductCard extends StatelessWidget {
@@ -38,39 +40,49 @@ class ProductCard extends StatelessWidget {
       fit: BoxFit.cover,
     );
 
-    return Column(
-      mainAxisAlignment: MainAxisAlignment.center,
-      crossAxisAlignment: CrossAxisAlignment.center,
-      children: <Widget>[
-        AspectRatio(
-          aspectRatio: imageAspectRatio,
-          child: imageWidget,
-        ),
-        SizedBox(
-          height: kTextBoxHeight * MediaQuery.of(context).textScaleFactor,
-          width: 121.0,
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.end,
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: <Widget>[
-              // TODO(larche): Make headline6 when available
-              Text(
-                product == null ? '' : product.name,
-                style: theme.textTheme.button,
-                softWrap: false,
-                overflow: TextOverflow.ellipsis,
-                maxLines: 1,
-              ),
-              SizedBox(height: 4.0),
-              // TODO(larche): Make subtitle2 when available
-              Text(
-                product == null ? '' : formatter.format(product.price),
-                style: theme.textTheme.caption,
-              ),
-            ],
+    return ScopedModelDescendant<AppStateModel>(
+      builder: (context, child, model) => GestureDetector(
+        onTap: () {
+          model.addProductToCart(product.id);
+          Scaffold.of(context).showSnackBar(SnackBar(
+            content:
+            Text('${product.name} has been added to your cart.'),
+          ));
+        },
+        child: child,
+      ),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: <Widget>[
+          AspectRatio(
+            aspectRatio: imageAspectRatio,
+            child: imageWidget,
           ),
-        ),
-      ],
+          SizedBox(
+            height: kTextBoxHeight * MediaQuery.of(context).textScaleFactor,
+            width: 121.0,
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.end,
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: <Widget>[
+                Text(
+                  product == null ? '' : product.name,
+                  style: theme.textTheme.button,
+                  softWrap: false,
+                  overflow: TextOverflow.ellipsis,
+                  maxLines: 1,
+                ),
+                SizedBox(height: 4.0),
+                Text(
+                  product == null ? '' : formatter.format(product.price),
+                  style: theme.textTheme.caption,
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

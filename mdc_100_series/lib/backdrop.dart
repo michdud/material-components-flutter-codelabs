@@ -15,8 +15,9 @@
 import 'package:flutter/material.dart';
 import 'package:meta/meta.dart';
 
-import 'model/product.dart';
 import 'login.dart';
+import 'model/product.dart';
+import 'shopping_cart.dart';
 
 const double _kFlingVelocity = 2.0;
 
@@ -98,7 +99,8 @@ class _BackdropTitle extends AnimatedWidget {
                   end: Offset(1.0, 0.0),
                 ).evaluate(animation),
                 child: ImageIcon(AssetImage('assets/diamond.png')),
-              )]),
+              )
+            ]),
           ),
         ),
         // Here, we do a custom cross fade between backTitle and frontTitle.
@@ -249,7 +251,17 @@ class _BackdropState extends State<Backdrop>
         backTitle: widget.backTitle,
       ),
       actions: <Widget>[
-        new IconButton(
+        IconButton(
+          icon: const Icon(Icons.shopping_cart),
+          onPressed: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                  builder: (BuildContext context) => ShoppingCartPage()),
+            );
+          },
+        ),
+        IconButton(
           icon: const Icon(Icons.search),
           onPressed: () {
             Navigator.push(
@@ -258,7 +270,7 @@ class _BackdropState extends State<Backdrop>
             );
           },
         ),
-        new IconButton(
+        IconButton(
           icon: const Icon(Icons.tune),
           onPressed: () {
             Navigator.push(

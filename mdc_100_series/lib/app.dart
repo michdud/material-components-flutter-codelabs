@@ -18,6 +18,7 @@ import 'backdrop.dart';
 import 'colors.dart';
 import 'home.dart';
 import 'login.dart';
+import 'short_bottom_sheet.dart';
 import 'category_menu_page.dart';
 import 'model/product.dart';
 import 'supplemental/cut_corners_border.dart';
@@ -34,15 +35,18 @@ class _ShrineAppState extends State<ShrineApp> {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Shrine',
-      home: Backdrop(
-        currentCategory: _currentCategory,
-        frontLayer: HomePage(category: _currentCategory),
-        backLayer: CategoryMenuPage(
+      home: HomePage(
+        shortBottomSheet: ShortBottomSheet(),
+        backdrop: Backdrop(
           currentCategory: _currentCategory,
-          onCategoryTap: _onCategoryTap,
+          frontLayer: ProductPage(category: _currentCategory),
+          backLayer: CategoryMenuPage(
+            currentCategory: _currentCategory,
+            onCategoryTap: _onCategoryTap,
+          ),
+          frontTitle: Text('SHRINE'),
+          backTitle: Text('MENU'),
         ),
-        frontTitle: Text('SHRINE'),
-        backTitle: Text('MENU'),
       ),
       initialRoute: '/login',
       onGenerateRoute: _getRoute,
@@ -115,6 +119,10 @@ TextTheme _buildShrineTextTheme(TextTheme base) {
     body2: base.body2.copyWith(
       fontWeight: FontWeight.w500,
       fontSize: 16.0,
+    ),
+    button: base.button.copyWith(
+      fontWeight: FontWeight.w500,
+      fontSize: 14.0,
     ),
   ).apply(
     fontFamily: 'Rubik',

@@ -13,20 +13,51 @@
 // limitations under the License.
 
 import 'package:flutter/material.dart';
+import 'package:scoped_model/scoped_model.dart';
 import 'package:intl/intl.dart';
 
+import 'model/app_state_model.dart';
 import 'model/data.dart';
-import 'model/product.dart';
-import 'supplemental/asymmetric_view.dart';
+import 'package:Shrine/model/product.dart';
+import 'package:Shrine/supplemental/asymmetric_view.dart';
+import 'backdrop.dart';
+import 'short_bottom_sheet.dart';
 
-class HomePage extends StatelessWidget {
+class ProductPage extends StatelessWidget {
   final Category category;
 
-  const HomePage({this.category: Category.all});
+  const ProductPage({this.category: Category.all});
 
   @override
   Widget build(BuildContext context) {
-    return AsymmetricView(products: getProducts(category));
+    return ScopedModelDescendant<AppStateModel>(
+      builder: (context, child, model) => AsymmetricView(
+        products: model.getProducts(),
+      ),
+    );
   }
 }
 
+class HomePage extends StatelessWidget {
+  final ShortBottomSheet shortBottomSheet;
+  final Backdrop backdrop;
+
+  const HomePage({
+    Key key,
+    this.shortBottomSheet,
+    this.backdrop
+  }) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      children: <Widget>[
+        backdrop,
+        Align(
+          alignment: Alignment.bottomRight,
+          child: shortBottomSheet
+        ),
+      ],
+    );
+  }
+}

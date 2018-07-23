@@ -13,7 +13,19 @@
 // limitations under the License.
 
 import 'package:flutter/material.dart';
+import 'package:scoped_model/scoped_model.dart';
 
-import 'app.dart';
+import 'package:Shrine/app.dart';
+import 'package:Shrine/model/app_state_model.dart';
 
-void main() => runApp(ShrineApp());
+void main() {
+  AppStateModel model = AppStateModel();
+  model.loadProducts();
+
+  runApp(
+    ScopedModel<AppStateModel>(
+      model: model,
+      child: ShrineApp(),
+    ),
+  );
+}
