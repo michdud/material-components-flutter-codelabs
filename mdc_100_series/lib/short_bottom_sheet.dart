@@ -19,12 +19,11 @@ class _ShortBottomSheetState extends State<ShortBottomSheet>
   double _cartPadding;
   double _width;
   AnimationController _controller;
+  AnimationController _expandController;
   double _widthEndTime;
   double _heightEndTime;
   double _iconRowOpacityStartTime;
   double _iconRowOpacityEndTime;
-
-  int numProducts = 3;
 
   @override
   void initState() {
@@ -32,15 +31,20 @@ class _ShortBottomSheetState extends State<ShortBottomSheet>
     _adjustCartPadding(0);
     _updateWidth(0);
     _controller = AnimationController(
-        duration: const Duration(milliseconds: 300),
-        vsync: this
+      duration: const Duration(milliseconds: 300),
+      vsync: this
     );
-    _setToExpandTiming();
+    _expandController = AnimationController(
+      duration: const Duration(milliseconds: 225),
+      vsync: this
+    );
+    _setToOpenTiming();
   }
 
   @override
   void dispose() {
     _controller.dispose();
+    _expandController.dispose();
     super.dispose();
   }
 
@@ -58,38 +62,43 @@ class _ShortBottomSheetState extends State<ShortBottomSheet>
     }
   }
 
-  void _updateWidth(int numProducts) {
+  double _updateWidth(int numProducts) {
     _width = _getWidth(numProducts);
+    return _width;
   }
 
-  bool get _isExpanded {
+  bool get _isOpen {
     final AnimationStatus status = _controller.status;
     return status == AnimationStatus.completed ||
         status == AnimationStatus.forward;
   }
 
-  void _setToExpandTiming() {
+  void _setToOpenTiming() {
     _widthEndTime = 0.35;
     _heightEndTime = 1.0;
     _iconRowOpacityStartTime = 0.0;
     _iconRowOpacityEndTime = 0.25;
   }
 
-  void _setToCollapseTiming() {
+  void _setToCloseTiming() {
     _widthEndTime = 0.44; // 133 ms
     _heightEndTime = 0.83; // 250 ms
     _iconRowOpacityStartTime = 0.25;
     _iconRowOpacityEndTime = 0.5;
   }
 
-  void _expand() {
-    if(!_isExpanded) {
-      _setToExpandTiming();
+  void _open() {
+    if(!_isOpen) {
+      _setToOpenTiming();
       _controller.forward();
     } else { // TODO: Remove this when the carrot is available
-      _setToCollapseTiming();
+      _setToCloseTiming();
       _controller.reverse();
     }
+  }
+
+  void _expand() {
+
   }
 
   void _adjustCartPadding(int numProducts) {
@@ -105,7 +114,20 @@ class _ShortBottomSheetState extends State<ShortBottomSheet>
     int numProducts = model.productsInCart.keys.length;
 
     _adjustCartPadding(numProducts);
-    _updateWidth(numProducts);
+    //_updateWidth(numProducts);
+
+    Animation<double> updateInitWidth = Tween<double>(
+      begin: _width,
+      end: _updateWidth(numProducts)
+    ).animate(
+      CurvedAnimation(
+        parent: _expandController,
+        curve: Interval(
+          0.0, 1.0,
+          curve: easeFastOutSlowIn
+        ),
+      ),
+    );
 
     Animation<double> width = Tween<double>(
       begin: _width,
@@ -119,6 +141,18 @@ class _ShortBottomSheetState extends State<ShortBottomSheet>
         ),
       ),
     );
+
+    /*updateInitWidth.addStatusListener((status) {
+      if(status == AnimationStatus.completed) {
+        updateInitWidth = width;
+      }
+    });*/
+
+    /*width.addStatusListener((status) {
+      if(status == AnimationStatus.completed) {
+        width = updateInitWidth;
+      }
+    });*/
 
     Animation<double> height = Tween<double>(
       begin: 56.0, //TODO: maybe declare this as the height
@@ -153,8 +187,8 @@ class _ShortBottomSheetState extends State<ShortBottomSheet>
       CurvedAnimation(
         parent: _controller,
         curve: Interval(
-          _iconRowOpacityStartTime, _iconRowOpacityEndTime,
-          curve: Curves.linear,
+          0.0, _widthEndTime,
+          curve: easeFastOutSlowIn,
         ),
       ),
     );
@@ -168,7 +202,7 @@ class _ShortBottomSheetState extends State<ShortBottomSheet>
         height: height.value,
         child: GestureDetector(
           behavior: HitTestBehavior.opaque,
-          onTap: _expand, // TODO: This should only work if the cart is closed - otherwise should only toggle on carrot button
+          onTap: _open, // TODO: This should only work if the cart is closed - otherwise should only toggle on carrot button
           child: Material(
             type: MaterialType.canvas,
             shape: BeveledRectangleBorder(
@@ -215,7 +249,7 @@ class _ShortBottomSheetState extends State<ShortBottomSheet>
 }
 
 class BottomSheetProducts extends StatelessWidget {
-  AnimationController _controller;
+  final AnimationController _controller;
 
   BottomSheetProducts(
     this._controller
@@ -243,27 +277,13 @@ class BottomSheetProducts extends StatelessWidget {
 
   List<Container> _generateImageList(AppStateModel model) {
     Map<int, int> products = model.productsInCart;
-    int numProducts = products.keys.length; // Don't call totalCartQuantity, because products won't be repeated in the cart preview (i.e. duplicates of a product won't be sho
+    int numProducts = products.keys.length; // Don't call totalCartQuantity, because products won't be repeated in the cart preview (i.e. duplicates of a product won't be shown)
     var keys = products.keys;
 
     return List.generate(getNumImagesToShow(numProducts), (int index) { // reverse the products per email from kunal (may change)
-      Product product = model.getProductById(keys.elementAt(keys.length - 1 - index));
-      return Container(
-          width: 40.0,
-          height: 40.0,
-          decoration: BoxDecoration(
-            image: DecorationImage(
-                image: ExactAssetImage(
-                  product.assetName, // asset name
-                  package: product.assetPackage, // asset package
-                ),
-                fit: BoxFit.cover
-            ),
-            borderRadius: BorderRadius.all(
-                Radius.circular(10.0)
-            ),
-          ),
-          margin: EdgeInsets.only(left: 16.0)
+        Product product = model.getProductById(keys.elementAt(keys.length - 1 - index));
+        return Container(
+            child: ProductIcon(_controller, false, product)
         );
       }
     );
@@ -273,21 +293,6 @@ class BottomSheetProducts extends StatelessWidget {
     List<Container> productsToDisplay = _generateImageList(model);
     int numProducts = model.productsInCart.keys.length;
     int numOverflowProducts = getNumOverflowProducts(numProducts);
-
-    Animation<double> scale = Tween<double>(
-      begin: 0.0,
-      end: 1.0
-    ).animate(
-      CurvedAnimation(
-        parent: _controller,
-        curve: Interval(
-          0.0, 0.2, // tODO: real numbers
-          curve: Curves.linear // tODO: real curve
-        ),
-      ),
-    );
-
-    productsToDisplay.elementAt(productsToDisplay.length - 1).width
 
     if(numOverflowProducts != 0) {
       productsToDisplay.add(
@@ -339,3 +344,77 @@ class AnimatedBuilderWithModel extends AnimatedWidget {
 // but it also takes a model
 // TODO: should the parameter be a Model instead of an AppStateModel?
 typedef Widget TransitionWithModelBuilder(BuildContext context, Widget child, AppStateModel model);
+
+class ProductIcon extends StatelessWidget {
+  final AnimationController _controller;
+  final bool isAnimated;
+  final Product product;
+
+  const ProductIcon(
+      this._controller,
+      this.isAnimated,
+      this.product
+  );
+
+  Widget _buildCart(BuildContext context) {//, Widget child) {
+    Animation<double> scale = Tween<double>(
+        begin: 0.0,
+        end: 40.0
+    ).animate(
+      CurvedAnimation(
+        parent: _controller,
+        curve: Interval(
+            0.0, 0.2, // tODO: real numbers
+            curve: Curves.linear // tODO: real curve
+        ),
+      ),
+    );
+
+    if(isAnimated) {
+      return Container(
+          width: scale.value,
+          height: scale.value,
+          decoration: BoxDecoration(
+            image: DecorationImage(
+                image: ExactAssetImage(
+                  product.assetName, // asset name
+                  package: product.assetPackage, // asset package
+                ),
+                fit: BoxFit.cover
+            ),
+            borderRadius: BorderRadius.all(
+                Radius.circular(10.0)
+            ),
+          ),
+          margin: EdgeInsets.only(left: 16.0)
+      );
+    } else {
+      return Container(
+        width: 40.0,
+        height: 40.0,
+        decoration: BoxDecoration(
+          image: DecorationImage(
+              image: ExactAssetImage(
+                product.assetName, // asset name
+                package: product.assetPackage, // asset package
+              ),
+              fit: BoxFit.cover
+          ),
+          borderRadius: BorderRadius.all(
+              Radius.circular(10.0)
+          ),
+        ),
+        margin: EdgeInsets.only(left: 16.0)
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return _buildCart(context);
+    /*return AnimatedBuilder(
+      builder: _buildCart,
+      animation: _controller
+    );*/
+  }
+}
