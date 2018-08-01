@@ -280,10 +280,10 @@ class _ShortBottomSheetState extends State<ShortBottomSheet>
                     ),
                     Expanded(
                       child: Padding(
-                      padding: EdgeInsets.only(top: 8.0),
-                      //child: ProductList()
-                      child: BottomSheetProducts(_expandController),
-                    ),
+                        padding: EdgeInsets.only(top: 8.0),
+                        //child: ProductList()
+                        child: BottomSheetProducts(_expandController),
+                      ),
                     ),
                   ],
                 ),
@@ -569,6 +569,7 @@ class ProductIcon extends StatelessWidget {
   }
 }
 
+/// Below code authored by hansmuller
 
 class _Interval {
   const _Interval(this.start, this.end) : assert(end > start);
