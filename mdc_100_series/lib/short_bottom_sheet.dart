@@ -6,8 +6,6 @@ import 'colors.dart';
 import 'model/product.dart';
 import 'package:flutter/scheduler.dart' show timeDilation;
 
-const EmphasizedEasing easeFastOutExtraSlowIn = const EmphasizedEasing();
-
 class ShortBottomSheet extends StatefulWidget {
   @override
   _ShortBottomSheetState createState() => _ShortBottomSheetState();
@@ -25,17 +23,8 @@ class _ShortBottomSheetState extends State<ShortBottomSheet>
   double _widthEndTime;
   double _heightStartTime;
   double _heightEndTime;
-  double _cutStartTime;
-  double _cutEndTime;
   double _iconRowOpacityStartTime;
   double _iconRowOpacityEndTime;
-
-  /*final Interval _widthEnter = Interval(0.0, 0.35, curve: easeFastOutExtraSlowIn);
-  final Interval _widthExit = Interval(0.17, 0.72, curve: easeFastOutExtraSlowIn);
-  final Interval _heightEnter = Interval(0.0, 1.0, curve: easeFastOutExtraSlowIn);
-  final Interval _heightExit = Interval(0.33, 1.0, curve: easeFastOutExtraSlowIn);
-  final Interval _iconRowOpacityEnter = Interval(0.0, 0.25, curve: easeFastOutExtraSlowIn);
-  final Interval _iconRowOpacityExit = Interval(0.25, 0.5, curve: easeFastOutExtraSlowIn);*/
 
   @override
   void initState() {
@@ -82,25 +71,25 @@ class _ShortBottomSheetState extends State<ShortBottomSheet>
   }
 
   void _setToOpenTiming() {
-    _widthStartTime = 0.0;
-    _widthEndTime = 0.35; // 105 ms
-    _cutStartTime = 0.0;
-    _cutEndTime = 0.35;
-    _heightStartTime = 0.0;
-    _heightEndTime = 1.0; // 300 ms
-    _iconRowOpacityStartTime = 0.0;
-    _iconRowOpacityEndTime = 0.25;
+    setState(() {
+      _widthStartTime = 0.0;
+      _widthEndTime = 0.35; // 105 ms
+      _heightStartTime = 0.0;
+      _heightEndTime = 1.0; // 300 ms
+      _iconRowOpacityStartTime = 0.0;
+      _iconRowOpacityEndTime = 0.25;
+    });
   }
 
   void _setToCloseTiming() {
-    _widthStartTime = 0.17; // 50 ms
-    _widthEndTime = 0.72; // 217 ms
-    _cutStartTime = 0.17;
-    _cutEndTime = 0.72;
-    _heightStartTime = 0.33; // 100 ms
-    _heightEndTime = 1.0; // 200 ms
-    _iconRowOpacityStartTime = 0.25;
-    _iconRowOpacityEndTime = 0.5;
+    setState(() {
+      _widthStartTime = 0.17; // 50 ms
+      _widthEndTime = 0.72; // 217 ms
+      _heightStartTime = 0.33; // 100 ms
+      _heightEndTime = 1.0; // 200 ms
+      _iconRowOpacityStartTime = 0.25;
+      _iconRowOpacityEndTime = 0.5;
+    });
   }
 
   void _open() {
@@ -114,120 +103,195 @@ class _ShortBottomSheetState extends State<ShortBottomSheet>
     }
   }
 
-  void _adjustCartPadding(int numProducts) {
+  double _adjustCartPadding(int numProducts) { // TODO: fix this
     if (numProducts == 0) {
       _cartPadding = 20.0;
     } else {
       _cartPadding = 32.0;
     }
+    return _cartPadding;
   }
 
   Widget _buildStack(BuildContext context, Widget child, AppStateModel model) {
     MediaQueryData media = MediaQuery.of(context);
+
     int numProducts = model.productsInCart.keys.length;
 
     _adjustCartPadding(numProducts);
+    _updateWidth(numProducts);
 
-    Animation<double> updateInitWidth =
-        Tween<double>(begin: _width, end: _updateWidth(numProducts)).animate(
-      CurvedAnimation(
-        parent: _expandController,
-        curve: Interval(0.0, 1.0, curve: easeFastOutExtraSlowIn),
-      ),
-    );
+    final cartHeight = 56.0;
+    final Cubic accelerateCurve = const Cubic(0.3, 0.0, 0.8, 0.15);
+    final Cubic decelerateCurve = const Cubic(0.05, 0.7, 0.1, 1.0);
 
-    Animation<double> width = Tween<double>(
-      begin: _width,
-      end: media.size
-          .width, // TODO: maybe make the mediaquerydata object a Size object to cut down on calling size()
-    ).animate(
-      CurvedAnimation(
-        parent: _controller,
-        curve: Interval(
-          _widthStartTime,
-          _widthEndTime,
-          curve: easeFastOutExtraSlowIn,
+    // maybe need to do _getWidth instead because a user might add a product to
+    // the cart while the sheet is opening
+    final TweenSequence<double> openWidthSequence = new TweenSequence(
+      elements: <TweenSequenceElement<double>>[
+        new TweenSequenceElement<double>(
+          // 1/6 of duration = 40% (0.4) of property delta
+          tween: new Tween<double>(begin: _width, end: _width + (media.size.width - _width) * 0.4),
+          curve: accelerateCurve,
+          weight: 1.0 / 6.0,
         ),
-      ),
-    );
-
-    Animation<double> height = Tween<double>(
-      begin: 56.0, //TODO: maybe declare this as the height
-      end: media.size.height,
-    ).animate(
-      CurvedAnimation(
-        parent: _controller,
-        curve: Interval(
-          _heightStartTime,
-          _heightEndTime,
-          curve: easeFastOutExtraSlowIn,
+        new TweenSequenceElement<double>(
+          tween: new Tween<double>(begin: _width + (media.size.width - _width) * 0.4, end: media.size.width),
+          curve: decelerateCurve,
+          weight: 5.0 / 6.0,
         ),
-      ),
+      ],
     );
 
-    Animation<double> opacity = Tween<double>(begin: 1.0, end: 0.0).animate(
+    Animation<double> openWidth = openWidthSequence.animate(
+        CurvedAnimation(
+          parent: _controller,
+          curve: Interval(
+            _widthStartTime,
+            _widthEndTime,
+          ),
+        ),
+    );
+
+    ProxyAnimation width = ProxyAnimation(openWidth);
+
+    final TweenSequence<double> heightSequence = new TweenSequence(
+      elements: <TweenSequenceElement<double>>[
+        new TweenSequenceElement<double>(
+          tween: new Tween<double>(begin: cartHeight, end: (media.size.height - cartHeight) * 0.4),
+          curve: accelerateCurve,
+          weight: 1.0 / 6.0,
+        ),
+        new TweenSequenceElement<double>(
+            tween: new Tween<double>(begin: (media.size.height - cartHeight) * 0.4, end: media.size.height),
+            curve: decelerateCurve,
+            weight: 5.0 / 6.0,
+        ),
+      ],
+    );
+
+    Animation<double> height = heightSequence.animate(
+        CurvedAnimation(
+          parent: _controller,
+          curve: Interval(
+            _heightStartTime,
+            _heightEndTime,
+          ),
+        ),
+    );
+
+    final TweenSequence<double> opacitySequence = new TweenSequence(
+      elements: <TweenSequenceElement<double>>[
+        new TweenSequenceElement<double>(
+          tween: new Tween<double>(begin: 1.0, end: 0.4),
+          curve: accelerateCurve,
+          weight: 1.0 / 6.0,
+        ),
+        new TweenSequenceElement<double>(
+          tween: new Tween<double>(begin: 0.4, end: 0.0),
+          curve: decelerateCurve,
+          weight: 5.0 / 6.0,
+        ),
+      ]
+    );
+
+    Animation<double> opacity = opacitySequence.animate(
       CurvedAnimation(
         parent: _controller,
         curve: Interval(
           _iconRowOpacityStartTime,
           _iconRowOpacityEndTime, // TODO: could use a better name
-          curve: easeFastOutExtraSlowIn,
         ),
       ),
     );
 
-    // TODO: this animation looks funky even though it should be = width
-    Animation<double> cut = Tween<double>(begin: 24.0, end: 0.0).animate(
+    final TweenSequence<double> cutSequence = TweenSequence(
+      elements: <TweenSequenceElement<double>>[
+        TweenSequenceElement<double>(
+          tween: Tween<double>(begin: 24.0, end: (24.0 - 0.0) * 0.4),
+          curve: accelerateCurve, //Interval(_widthStartTime, _widthStartTime + _widthEndTime * 0.17, curve: accelerateCurve),
+          weight: 0.17,
+        ),
+        TweenSequenceElement<double>(
+          tween: Tween<double>(begin: (24.0 - 0.0) * 0.4, end: 0.0),
+          curve: decelerateCurve, //Interval(_widthStartTime + _widthEndTime * 0.17, _widthEndTime, curve: decelerateCurve),
+          weight: 0.93,
+        ),
+      ],
+    );
+
+    Animation<double> cut = cutSequence.animate(
       CurvedAnimation(
         parent: _controller,
         curve: Interval(
-          0.9, // temporarily hardcoded
-          1.0,
-          curve: easeFastOutExtraSlowIn,
+          _widthStartTime,
+          _widthEndTime,
         ),
       ),
     );
 
-    // TODO: add animation for the icons
+    Animation<double> padding = Tween<double>(
+      begin: _cartPadding,
+      end: _adjustCartPadding(numProducts),
+    ).animate(
+      CurvedAnimation(
+        parent: _expandController,
+        curve: Curves.easeInOut // TODO: maybe a diff animation? ask around
+      ),
+    );
+
+    // TODO: add animation for the thumbnails
 
     return ScopedModelDescendant<AppStateModel>(
-      builder: (context, child, model) => SizedBox(
-            key: _shortBottomSheetKey,
-            width: width.value,
-            height: height.value,
-            child: GestureDetector(
-              behavior: HitTestBehavior.opaque,
-              onTap:
-                  _open, // TODO: This should only work if the cart is closed - otherwise should only toggle on carrot button
-              child: Material(
-                type: MaterialType.canvas,
-                shape: BeveledRectangleBorder(
-                  borderRadius:
-                      BorderRadius.only(topLeft: Radius.circular(cut.value)),
-                ),
-                elevation: 4.0,
-                color: kShrinePink50,
-                child: Opacity(
-                  opacity: opacity.value,
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.start,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: <Widget>[
-                      Padding(
-                        padding: EdgeInsets.only(
-                            left: _cartPadding, right: 8.0, top: 16.0),
-                        child: Icon(Icons.shopping_cart),
+      builder: (context, child, model) => AnimatedSize(
+        //key: _shortBottomSheetKey, //this is throwing an error but should it actually be in there?
+        duration: Duration(milliseconds: 225),
+        curve: Curves.easeInOut,
+        vsync: this,
+        alignment: Alignment.centerLeft,
+        child: SizedBox(
+          width: width.value,
+          height: height.value,
+          child: GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap:
+                _open, // TODO: This should only work if the cart is closed - otherwise should only toggle on carrot button
+            child: Material(
+              type: MaterialType.canvas,
+              shape: BeveledRectangleBorder(
+                borderRadius:
+                    BorderRadius.only(topLeft: Radius.circular(cut.value)),
+              ),
+              elevation: 4.0, // TODO: check this #
+              color: kShrinePink50,
+              child: Opacity(
+                opacity: opacity.value,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.start,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    AnimatedPadding(
+                      padding: EdgeInsets.only(
+                          left: _cartPadding, right: 8.0, top: 16.0),
+                      child: Icon(
+                        Icons.shopping_cart,
+                        semanticLabel: "Cart",
                       ),
-                      Padding(
-                        padding: EdgeInsets.only(top: 8.0),
-                        child: BottomSheetProducts(_controller),
-                      ),
-                    ],
-                  ),
+                      duration: Duration(milliseconds: 225)
+                    ),
+                    Expanded(
+                      child: Padding(
+                      padding: EdgeInsets.only(top: 8.0),
+                      //child: ProductList()
+                      child: BottomSheetProducts(_expandController),
+                    ),
+                    ),
+                  ],
                 ),
               ),
             ),
           ),
+        ),
+      ),
     );
   }
 
@@ -239,6 +303,114 @@ class _ShortBottomSheetState extends State<ShortBottomSheet>
           builder: _buildStack, animation: _controller, model: model),
     );
   }
+}
+
+class ProductList extends StatelessWidget {
+  final GlobalKey<AnimatedListState> _listKey = GlobalKey<AnimatedListState>();
+  ListModel _list;
+
+  Widget _buildThumbnail(
+      BuildContext context, int index, Animation<double> animation) {
+    print('productlist _buildthumbnail');
+    AppStateModel model = ModelFinder<AppStateModel>().of(context); // TODO: don't rely on the ModelFinder
+    int productId = model.productsInCart[index];
+    Product product = model.getProductById(productId);
+    assert(product != null);
+
+    return ProductThumbnail( //there's a bottom padding issue
+      animation, product
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    print('productlist build');
+
+    return ScopedModelDescendant<AppStateModel>(
+      builder: (context, child, model) =>
+      Container(
+        color: Color.fromRGBO(50, 50, 50, 1.0),
+        child: Text('hi'),
+        /*child: AnimatedList(
+              itemBuilder: _buildThumbnail,
+              initialItemCount: model.productsInCart.length, // TODO: don't rely on the ModelFinder
+              scrollDirection: Axis.horizontal,
+            ),*/
+      ),
+
+      );
+  }
+}
+
+class ProductThumbnail extends StatelessWidget {
+  final Animation<double> animation;
+  final Product product;
+
+  ProductThumbnail(this.animation, this.product);
+
+  @override
+  Widget build(BuildContext context) {
+    print(product.assetName);
+    print('productthumbnail');
+    return SizeTransition(
+      sizeFactor: animation,
+      child: Container(
+        width: 40.0,
+        height: 40.0,
+        decoration: BoxDecoration(
+          image: DecorationImage(
+              image: ExactAssetImage(
+                product.assetName, // asset name
+                package: product.assetPackage, // asset package
+              ),
+              fit: BoxFit.cover),
+          borderRadius: BorderRadius.all(Radius.circular(10.0)),
+        ),
+        margin: EdgeInsets.only(left: 16.0)
+      )
+    );
+  }
+}
+
+/// this class adapted from the AnimatedList example and also probably won't work!
+class ListModel { // TODO: this probably won't work with the actual model
+  ListModel({
+    @required this.listKey,
+    @required this.removedItemBuilder,
+    @required context
+  }) : assert(listKey != null),
+       assert(removedItemBuilder != null),
+       model = ModelFinder<AppStateModel>().of(context);
+  
+  final GlobalKey<AnimatedListState> listKey;
+  final dynamic removedItemBuilder;
+  final AppStateModel model;
+  final BuildContext context;
+  
+  AnimatedListState get _animatedList => listKey.currentState;
+  
+  void insert(int item) {
+    model.addProductToCart(item);
+    _animatedList.insertItem(model.productsInCart.length - 1); // TODO: Fix this for when there's > 3 products
+  }
+
+  int removeItem(int index) {
+    int removedItem = model.productsInCart.keys.elementAt(index); // TODO: this probably isn't safe
+    if(model.productsInCart.containsKey(removedItem)) {
+      model.removeItemFromCart(removedItem);
+      _animatedList.removeItem(index,
+          (BuildContext context, Animation<double> animation) {
+        return removedItemBuilder(removedItem, context, animation);
+      });
+    }
+    return removedItem;
+  }
+
+  int get length => model.productsInCart.length;
+
+  int operator [](int index) => model.productsInCart.keys.elementAt(index);
+
+  //int indexOf(int item) => model.productsInCart.keys.
 }
 
 class BottomSheetProducts extends StatelessWidget {
@@ -276,7 +448,7 @@ class BottomSheetProducts extends StatelessWidget {
     return List.generate(getNumImagesToShow(numProducts), (int index) {
       // reverse the products per email from Kunal (may change)
       Product product =
-          model.getProductById(keys.elementAt(keys.length - 1 - index));
+          model.getProductById(keys.elementAt(index));
       return Container(child: ProductIcon(_controller, false, product));
     });
   }
@@ -335,19 +507,18 @@ class AnimatedBuilderWithModel extends AnimatedWidget {
 // the widget parameter in AnimatedBuilder is called TransitionBuilder,
 // because it's called every time the animation changes value. This is similar,
 // but it also takes a model
-// TODO: should the parameter be a Model instead of an AppStateModel?
+
 typedef Widget TransitionWithModelBuilder(
     BuildContext context, Widget child, AppStateModel model);
 
 class ProductIcon extends StatelessWidget {
   final AnimationController _controller;
-  final bool isAnimated;
+  bool isAnimated;
   final Product product;
 
-  const ProductIcon(this._controller, this.isAnimated, this.product);
+  ProductIcon(this._controller, this.isAnimated, this.product);
 
-  Widget _buildCart(BuildContext context) {
-    //, Widget child) {
+  Widget _buildIcon(BuildContext context, Widget child) {
     Animation<double> scale = Tween<double>(begin: 0.0, end: 40.0).animate(
       CurvedAnimation(
         parent: _controller,
@@ -390,44 +561,71 @@ class ProductIcon extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return _buildCart(context);
-    /*return AnimatedBuilder(
-      builder: _buildCart,
+    //return _buildCart(context);
+    return AnimatedBuilder(
+      builder: _buildIcon,
       animation: _controller
-    );*/
+    );
   }
 }
 
-/// This implementation creates the two curves required for this motion,
-/// but transformed so that they fit within the 0.0 - 1.0 interval. Instead of
-/// "physically" stitching the curves together, the curve that is used for
-/// animation is switched based on the time at which the animation is currently.
-/// This leads to skipping/jumpiness (change timeDilation to 10.0 to see this
-/// more clearly).
-class EmphasizedEasing extends Curve {
-  //curve from the original spec
-  final Cubic accelerateCurve = const Cubic(0.3, 0.0, 0.8,
-      0.15); // divide the x-coords of these points by ~6 (6 = 1 / 0.1666)
-  final Cubic accelerateCurveModified = const Cubic(
-      0.05, 0.0, 0.1333, 0.15); // modified to fit into the time interval
-  //curve from the original spec
-  final Cubic decelerateCurve = const Cubic(0.05, 0.7, 0.1,
-      1.0); // divide the x-coords of these points by ~1.2 (1.2 = 1 / (1 - 0.1666)) and then add 0.1666
-  final Cubic decelerateCurveModified = const Cubic(
-      0.1333, 0.15, 0.2499, 1.0); // modified to fit into the time interval
-  final double midpointX = 0.166666;
 
-  const EmphasizedEasing();
+class _Interval {
+  const _Interval(this.start, this.end) : assert(end > start);
+  final double start;
+  final double end;
+  bool contains(double t) => t >= start && t < end;
+  double value(double t) => (t - start) / (end - start);
+  String toString() => '<$start, $end>';
+}
 
-  /// Spec: When at 1/6 (0.166666...) of total duration, interpolator is 0.4
-  // given some t, return the y-value from this curve
-  @override
-  double transform(double t) {
-    //this is wrong because the accelerateCurve is only going to get through 0.16666 of itself instead of the full curve
-    if (t <= midpointX) {
-      return accelerateCurveModified.transform(t);
-    } else {
-      return decelerateCurveModified.transform(t);
+class TweenSequenceElement<T> {
+  const TweenSequenceElement({
+    @required this.tween,
+    @required this.weight,
+    this.curve
+  }) : assert(tween != null), assert(weight != null && weight > 0.0);
+  final Tween<T> tween;
+  final double weight;
+  final Curve curve;
+}
+
+class TweenSequence<T> extends Animatable<T> {
+  TweenSequence({ @required this.elements }) {
+    assert(elements != null && elements.isNotEmpty);
+
+    double totalWeight = 0.0;
+    for (TweenSequenceElement<T> element in elements)
+      totalWeight += element.weight;
+
+    double start = 0.0;
+    for (int i = 0; i < elements.length; i++) {
+      final double end = start + elements[i].weight / totalWeight;
+      intervals.add(new _Interval(start, end));
+      start = end;
     }
+  }
+
+  final List<TweenSequenceElement<T>> elements;
+  final List<_Interval> intervals = <_Interval>[];
+
+  T _evaluate(double t, int index) {
+    final TweenSequenceElement<T> element = elements[index];
+    final double tInterval = intervals[index].value(t);
+    final double tCurve =  element.curve == null ? tInterval : element.curve.transform(tInterval);
+    return element.tween.lerp(tCurve);
+  }
+
+  @override
+  T evaluate(Animation<double> animation) {
+    final double t = animation.value;
+    assert(t >= 0.0 && t <= 1.0);
+    if (t == 1.0)
+      return _evaluate(t, elements.length - 1);
+    for (int index = 0; index < elements.length; index++) {
+      if (intervals[index].contains(t))
+        return _evaluate(t, index);
+    }
+    // no interval contains t? assert failure
   }
 }
