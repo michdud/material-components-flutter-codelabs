@@ -47,7 +47,7 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
     final localTheme = Theme.of(context);
 
     return Scaffold(
-      backgroundColor: kShrinePink100,
+      backgroundColor: kShrinePink50,
       body: SafeArea(
         child: Container(
           child: ScopedModelDescendant<AppStateModel>(
