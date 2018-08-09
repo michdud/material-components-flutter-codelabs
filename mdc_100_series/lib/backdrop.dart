@@ -251,7 +251,7 @@ class _BackdropState extends State<Backdrop>
         backTitle: widget.backTitle,
       ),
       actions: <Widget>[
-        IconButton(
+       /* IconButton(
           icon: const Icon(Icons.shopping_cart),
           onPressed: () {
             Navigator.push(
@@ -260,7 +260,7 @@ class _BackdropState extends State<Backdrop>
                   builder: (BuildContext context) => ShoppingCartPage()),
             );
           },
-        ),
+        ),*/
         IconButton(
           icon: const Icon(Icons.search),
           onPressed: () {
