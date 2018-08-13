@@ -18,6 +18,7 @@ import 'package:meta/meta.dart';
 import 'login.dart';
 import 'model/product.dart';
 import 'shopping_cart.dart';
+import 'short_bottom_sheet.dart';
 
 const double _kFlingVelocity = 2.0;
 
@@ -152,6 +153,7 @@ class Backdrop extends StatefulWidget {
   final Widget backLayer;
   final Widget frontTitle;
   final Widget backTitle;
+  final BoolCallback toggleSheet;
 
   const Backdrop({
     @required this.currentCategory,
@@ -159,6 +161,7 @@ class Backdrop extends StatefulWidget {
     @required this.backLayer,
     @required this.frontTitle,
     @required this.backTitle,
+    this.toggleSheet
   })  : assert(currentCategory != null),
         assert(frontLayer != null),
         assert(backLayer != null),
@@ -210,6 +213,7 @@ class _BackdropState extends State<Backdrop>
   void _toggleBackdropLayerVisibility() {
     _controller.fling(
         velocity: _frontLayerVisible ? -_kFlingVelocity : _kFlingVelocity);
+    widget.toggleSheet(_frontLayerVisible);
   }
 
   Widget _buildStack(BuildContext context, BoxConstraints constraints) {
@@ -289,3 +293,5 @@ class _BackdropState extends State<Backdrop>
     );
   }
 }
+
+typedef BoolCallback = void Function(bool condition);

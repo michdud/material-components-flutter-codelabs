@@ -28,15 +28,30 @@ class ShrineApp extends StatefulWidget {
   _ShrineAppState createState() => _ShrineAppState();
 }
 
-class _ShrineAppState extends State<ShrineApp> {
+class _ShrineAppState extends State<ShrineApp>
+    with SingleTickerProviderStateMixin {
   Category _currentCategory = Category.all;
+
+  AnimationController slideBottomSheetController;
+
+  @override
+  void initState() {
+    super.initState();
+    slideBottomSheetController =
+        AnimationController(vsync: this, duration: Duration(milliseconds: 300));
+  }
+
+  void toggleShortBottomSheet(bool isFrontLayerVisible) {
+    isFrontLayerVisible
+        ? slideBottomSheetController.reverse()
+        : slideBottomSheetController.forward();
+  }
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Shrine',
       home: HomePage(
-        shortBottomSheet: ShortBottomSheet(),
         backdrop: Backdrop(
           currentCategory: _currentCategory,
           frontLayer: ProductPage(category: _currentCategory),
@@ -46,7 +61,10 @@ class _ShrineAppState extends State<ShrineApp> {
           ),
           frontTitle: Text('SHRINE'),
           backTitle: Text('MENU'),
+          toggleSheet: toggleShortBottomSheet,
         ),
+        shortBottomSheet:
+            ShortBottomSheet(hideController: slideBottomSheetController),
       ),
       initialRoute: '/login',
       onGenerateRoute: _getRoute,
@@ -105,28 +123,28 @@ ThemeData _buildShrineTheme() {
 }
 
 TextTheme _buildShrineTextTheme(TextTheme base) {
-  return base.copyWith(
-    headline: base.headline.copyWith(
-      fontWeight: FontWeight.w500,
-    ),
-    title: base.title.copyWith(
-        fontSize: 18.0
-    ),
-    caption: base.caption.copyWith(
-      fontWeight: FontWeight.w400,
-      fontSize: 14.0,
-    ),
-    body2: base.body2.copyWith(
-      fontWeight: FontWeight.w500,
-      fontSize: 16.0,
-    ),
-    button: base.button.copyWith(
-      fontWeight: FontWeight.w500,
-      fontSize: 14.0,
-    ),
-  ).apply(
-    fontFamily: 'Rubik',
-    displayColor: kShrineBrown900,
-    bodyColor: kShrineBrown900,
-  );
+  return base
+      .copyWith(
+        headline: base.headline.copyWith(
+          fontWeight: FontWeight.w500,
+        ),
+        title: base.title.copyWith(fontSize: 18.0),
+        caption: base.caption.copyWith(
+          fontWeight: FontWeight.w400,
+          fontSize: 14.0,
+        ),
+        body2: base.body2.copyWith(
+          fontWeight: FontWeight.w500,
+          fontSize: 16.0,
+        ),
+        button: base.button.copyWith(
+          fontWeight: FontWeight.w500,
+          fontSize: 14.0,
+        ),
+      )
+      .apply(
+        fontFamily: 'Rubik',
+        displayColor: kShrineBrown900,
+        bodyColor: kShrineBrown900,
+      );
 }

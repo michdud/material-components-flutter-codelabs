@@ -11,7 +11,9 @@ import 'package:flutter/scheduler.dart' show timeDilation;
 import 'dart:async';
 
 class ShortBottomSheet extends StatefulWidget {
-  const ShortBottomSheet({Key key}) : super(key: key);
+  const ShortBottomSheet({Key key, this.hideController}) : super(key: key);
+
+  final AnimationController hideController;
 
   @override
   _ShortBottomSheetState createState() => _ShortBottomSheetState();
@@ -40,17 +42,9 @@ class _ShortBottomSheetState extends State<ShortBottomSheet>
   double _width;
   // Controller for the opening and closing of the ShortBottomSheet
   AnimationController _controller;
-  // Controller for the expansion (i.e. when products are added) of the ShortBottomSheet
-  AnimationController _expandController;
-  // Represent the differing intervals of time over which the animations take place.
-  double _widthStartTime;
-  double _widthEndTime;
-  double _heightStartTime;
-  double _heightEndTime;
-  double _thumbnailOpacityStartTime;
-  double _thumbnailOpacityEndTime;
-  double _cartOpacityStartTime;
-  double _cartOpacityEndTime;
+  // Controller for hiding/showing the ShortBottomSheet when the backdrop's frontLayer
+  // is opened and closed.
+  AnimationController _hideController;
   // Tracks the size of the screen so animations can be updated appropriately.
   Size _mediaSize;
   // Animations for the opening and closing of the ShortBottomSheet
@@ -60,9 +54,9 @@ class _ShortBottomSheetState extends State<ShortBottomSheet>
   Animation<double> _cartOpacityAnimation;
   Animation<double> _shapeAnimation;
   // Curves that represent the two curves that compose the emphasized easing curve.
-  final Cubic accelerateCurve = const Cubic(0.3, 0.0, 0.8, 0.15);
-  final Cubic decelerateCurve = const Cubic(0.05, 0.7, 0.1, 1.0);
-  final cartHeight = 56.0;
+  final Cubic _accelerateCurve = const Cubic(0.3, 0.0, 0.8, 0.15);
+  final Cubic _decelerateCurve = const Cubic(0.05, 0.7, 0.1, 1.0);
+  final _cartHeight = 56.0;
 
   @override
   void initState() {
@@ -71,16 +65,15 @@ class _ShortBottomSheetState extends State<ShortBottomSheet>
     _updateWidth(0);
     _controller = AnimationController(
         duration: const Duration(milliseconds: 300), vsync: this);
-    _expandController = AnimationController(
+    _hideController = AnimationController(
         duration: const Duration(milliseconds: 225), vsync: this);
-    _setToOpenTiming();
     _mediaSize = Size.zero;
   }
 
   @override
   void dispose() {
     _controller.dispose();
-    _expandController.dispose();
+    _hideController.dispose();
     super.dispose();
   }
 
@@ -100,96 +93,87 @@ class _ShortBottomSheetState extends State<ShortBottomSheet>
     double mediaHeight = _mediaSize.height;
 
     _widthAnimation = TweenSequence(
-      elements: <TweenSequenceElement<double>>[
-        new TweenSequenceElement<double>(
+      <TweenSequenceItem<double>>[
+        TweenSequenceItem<double>(
           // 1/6 of duration = 40% (0.4) of property delta
-          tween: new Tween<double>(
-              begin: _width, end: _width + (mediaWidth - _width) * 0.4),
-          curve: accelerateCurve,
+          tween: Tween<double>(
+                  begin: _width, end: _width + (mediaWidth - _width) * 0.4)
+              .chain(CurveTween(curve: _accelerateCurve)),
           weight: 1.0 / 6.0,
         ),
-        new TweenSequenceElement<double>(
-          tween: new Tween<double>(
-              begin: _width + (mediaWidth - _width) * 0.4, end: mediaWidth),
-          curve: decelerateCurve,
+        new TweenSequenceItem<double>(
+          tween: Tween<double>(
+                  begin: _width + (mediaWidth - _width) * 0.4, end: mediaWidth)
+              .chain(CurveTween(curve: _decelerateCurve)),
           weight: 5.0 / 6.0,
         ),
       ],
     ).animate(
       CurvedAnimation(
-        parent: _controller,
-        curve: _controller.status == AnimationStatus.forward ?
-            Interval(0.0, 0.35) :
-            Interval(0.17, 0.72)
-        /*curve: Interval(
-          _widthStartTime,
-          _widthEndTime,
-        ),*/
-      ),
+          parent: _controller,
+          curve: _controller.status == AnimationStatus.forward
+              ? Interval(0.0, 0.35)
+              : Interval(0.17, 0.72)),
     );
 
     _heightAnimation = TweenSequence(
-      elements: <TweenSequenceElement<double>>[
-        TweenSequenceElement<double>(
+      <TweenSequenceItem<double>>[
+        TweenSequenceItem<double>(
           tween: Tween<double>(
-              begin: cartHeight, end: (mediaHeight - cartHeight) * 0.4),
-          curve: accelerateCurve,
+                  begin: _cartHeight, end: (mediaHeight - _cartHeight) * 0.4)
+              .chain(CurveTween(curve: _accelerateCurve)),
           weight: 1.0 / 6.0,
         ),
-        TweenSequenceElement<double>(
+        TweenSequenceItem<double>(
           tween: Tween<double>(
-              begin: (mediaHeight - cartHeight) * 0.4, end: mediaHeight),
-          curve: decelerateCurve,
+                  begin: (mediaHeight - _cartHeight) * 0.4, end: mediaHeight)
+              .chain(CurveTween(curve: _decelerateCurve)),
           weight: 5.0 / 6.0,
         ),
       ],
     ).animate(
       CurvedAnimation(
-        parent: _controller,
-        curve: Interval(
-          _heightStartTime,
-          _heightEndTime,
-        ),
-      ),
+          parent: _controller,
+          curve: _controller.status == AnimationStatus.forward
+              ? Interval(0.0, 1.0)
+              : Interval(0.2, 1.0)),
     );
 
     _thumbnailOpacityAnimation = Tween<double>(begin: 1.0, end: 0.0).animate(
       CurvedAnimation(
-        parent: _controller,
-        curve: Interval(_thumbnailOpacityStartTime, _thumbnailOpacityEndTime,
-            curve: Curves.linear),
-      ),
+          parent: _controller,
+          curve: _controller.status == AnimationStatus.forward
+              ? Interval(0.0, 0.25, curve: Curves.linear)
+              : Interval(0.25, 0.75, curve: Curves.linear)),
     );
 
     _cartOpacityAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(
-        parent: _controller,
-        curve: Interval(_cartOpacityStartTime, _cartOpacityEndTime,
-            curve: Curves.linear),
-      ),
+          parent: _controller,
+          curve: _controller.status == AnimationStatus.forward
+              ? Interval(0.25, 0.75, curve: Curves.linear)
+              : Interval(0.75, 1.0, curve: Curves.linear)),
     );
 
     _shapeAnimation = TweenSequence(
-      elements: <TweenSequenceElement<double>>[
-        TweenSequenceElement<double>(
-          tween: Tween<double>(begin: 24.0, end: (24.0 - 0.0) * 0.4),
-          curve: accelerateCurve,
+      <TweenSequenceItem<double>>[
+        TweenSequenceItem<double>(
+          tween: Tween<double>(begin: 24.0, end: (24.0 - 0.0) * 0.4)
+              .chain(CurveTween(curve: _accelerateCurve)),
           weight: 1.0 / 6.0,
         ),
-        TweenSequenceElement<double>(
-          tween: Tween<double>(begin: (24.0 - 0.0) * 0.4, end: 0.0),
-          curve: decelerateCurve,
+        TweenSequenceItem<double>(
+          tween: Tween<double>(begin: (24.0 - 0.0) * 0.4, end: 0.0)
+              .chain(CurveTween(curve: _decelerateCurve)),
           weight: 5.0 / 6.0,
         ),
       ],
     ).animate(
       CurvedAnimation(
-        parent: _controller,
-        curve: Interval(
-          _widthStartTime,
-          _widthEndTime,
-        ),
-      ),
+          parent: _controller,
+          curve: _controller.status == AnimationStatus.forward
+              ? Interval(0.0, 0.35)
+              : Interval(0.17, 0.72)),
     );
   }
 
@@ -228,40 +212,9 @@ class _ShortBottomSheetState extends State<ShortBottomSheet>
         status == AnimationStatus.forward;
   }
 
-  // Sets the times used by open/close animations to the timing used by the open
-  // animation.
-  void _setToOpenTiming() {
-    setState(() {
-      _widthStartTime = 0.0;
-      _widthEndTime = 0.35; // 105 ms
-      _heightStartTime = 0.0;
-      _heightEndTime = 1.0; // 300 ms
-      _thumbnailOpacityStartTime = 0.0;
-      _thumbnailOpacityEndTime = 0.25;
-      _cartOpacityStartTime = 0.25;
-      _cartOpacityEndTime = 0.75;
-    });
-  }
-
-  // Sets the times used by open/close animations to the timing used by the
-  // close animation.
-  void _setToCloseTiming() {
-    setState(() {
-      _widthStartTime = 0.17; // 50 ms
-      _widthEndTime = 0.72; // 217 ms
-      _heightStartTime = 0.33; // 100 ms
-      _heightEndTime = 1.0; // 200 ms
-      _thumbnailOpacityStartTime = 0.25;
-      _thumbnailOpacityEndTime = 0.75;
-      _cartOpacityStartTime = 0.75;
-      _cartOpacityEndTime = 1.0;
-    });
-  }
-
   // Opens the ShortBottomSheet if it's open, otherwise does nothing.
   void open() {
     if (!_isOpen) {
-      _setToOpenTiming();
       _controller.forward();
     }
   }
@@ -269,7 +222,6 @@ class _ShortBottomSheetState extends State<ShortBottomSheet>
   // Closes the ShortBottomSheet if it's open, otherwise does nothing.
   void close() {
     if (_isOpen) {
-      _setToCloseTiming();
       _controller.reverse();
     }
   }
@@ -283,8 +235,6 @@ class _ShortBottomSheetState extends State<ShortBottomSheet>
 
   bool _revealCart(double thumbnailOpacityValue) {
     if (thumbnailOpacityValue == 0.0) {
-      /*||
-        _cartOpacityAnimation.value == 1.0) {*/
       return true;
     } else {
       return false;
@@ -297,7 +247,7 @@ class _ShortBottomSheetState extends State<ShortBottomSheet>
       child: Column(children: <Widget>[
         Row(children: <Widget>[
           AnimatedPadding(
-              padding: EdgeInsets.only(left: _cartPadding, right: 8.0), //16.0),
+              padding: EdgeInsets.only(left: _cartPadding, right: 8.0),
               child: Icon(
                 Icons.shopping_cart,
                 semanticLabel: "Cart",
@@ -305,9 +255,9 @@ class _ShortBottomSheetState extends State<ShortBottomSheet>
               duration: Duration(milliseconds: 225)),
           Container(
             width: numProducts > 3
-                ? _width - 96
-                : _width - 64, // TODO: fix this hardcoded value
-            height: 56.0, //needed because otherwise vertical is unbounded
+                ? _width - 96 // Accounts for the overflow number
+                : _width - 64,
+            height: _cartHeight,
             child: Padding(
               padding: EdgeInsets.only(top: 8.0, bottom: 8.0),
               child: ProductList(),
@@ -315,6 +265,8 @@ class _ShortBottomSheetState extends State<ShortBottomSheet>
           ),
           ExtraProductsNumber()
         ]),
+        // Ensures the thumbnails are "pinned" to the top left when opening the
+        // sheet by filling the space beneath them.
         Expanded(child: Container())
       ]),
     );
@@ -332,47 +284,44 @@ class _ShortBottomSheetState extends State<ShortBottomSheet>
 
     // Update the variable used when building the cart padding.
     _adjustCartPadding(numProducts);
-
-    // Update animations only if the screen size has changed or the number of
-    // products has changed, since the animations rely on the screen size and
-    // number of products, but it's costly to recreate the animations each time
-    // the build method is called. Dubious that this really saves much, however,
-    // since the only time one of these things isn't true is when there are
-    // more than three products in the cart. Another option might be to just to
-    // make the width into an object and see if the references will be enough to
-    // auto-update the animation
-    /*if (_dimensionsNeedUpdate(context) || _widthNeedsUpdate(numProducts)) {
-      _updateWidth(numProducts);
-      _updateAnimations(context);
-    }*/
-
     _updateWidth(numProducts);
     _updateAnimations(context);
 
-    return AnimatedSize(
-      key: _shortBottomSheetKey,
-      duration: Duration(milliseconds: 225),
-      curve: Curves.easeInOut,
-      vsync: this,
-      alignment: FractionalOffset.topLeft,
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTap: open,
-        child: Container(
-          width: _widthAnimation.value,
-          height: _heightAnimation.value,
-          child: Material(
-              type: MaterialType.canvas,
-              animationDuration: Duration(milliseconds: 0),
-              shape: BeveledRectangleBorder(
-                borderRadius: BorderRadius.only(
-                    topLeft: Radius.circular(_shapeAnimation.value)),
-              ),
-              elevation: 4.0,
-              color: kShrinePink50,
-              child: _revealCart(_thumbnailOpacityAnimation.value)
-                  ? _buildShoppingCartPage()
-                  : _buildThumbnails(numProducts)),
+    Animation<Offset> offsetRect =
+        Tween<Offset>(begin: Offset(0.0, 0.0), end: Offset(1.0, 0.0)).animate(
+            CurvedAnimation(
+                parent: widget.hideController.view, curve: Curves.easeOut));
+
+    return SlideTransition(
+      position: offsetRect,
+      child: Align(
+        alignment: Alignment.bottomRight,
+        child: AnimatedSize(
+          key: _shortBottomSheetKey,
+          duration: Duration(milliseconds: 225),
+          curve: Curves.easeInOut,
+          vsync: this,
+          alignment: FractionalOffset.topLeft,
+          child: GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: open,
+            child: Container(
+              width: _widthAnimation.value,
+              height: _heightAnimation.value,
+              child: Material(
+                  type: MaterialType.canvas,
+                  animationDuration: Duration(milliseconds: 0),
+                  shape: BeveledRectangleBorder(
+                    borderRadius: BorderRadius.only(
+                        topLeft: Radius.circular(_shapeAnimation.value)),
+                  ),
+                  elevation: 4.0,
+                  color: kShrinePink50,
+                  child: _revealCart(_thumbnailOpacityAnimation.value)
+                      ? _buildShoppingCartPage()
+                      : _buildThumbnails(numProducts)),
+            ),
+          ),
         ),
       ),
     );
@@ -381,7 +330,7 @@ class _ShortBottomSheetState extends State<ShortBottomSheet>
   // Closes the cart if the cart is open, otherwise exits the app (this should
   // only be relevant for Android).
   Future<bool> _onWillPop() {
-    // TODO: how to return a Future<bool>?
+    // TODO: Is this a reasonable use of this callback? Do I need to explicitly return a Future?
     if (_isOpen) {
       close();
     } else {
@@ -411,10 +360,10 @@ class ProductList extends StatefulWidget {
 
 class ProductListState extends State<ProductList> {
   final GlobalKey<AnimatedListState> _listKey = GlobalKey<AnimatedListState>();
-  //_list represents the list that actively manipulates the AnimatedList,
+  // _list represents the list that actively manipulates the AnimatedList,
   // meaning that it needs to be updated by _internalList
   ListModel _list;
-  //internalList represents the list as it is updated by the AppStateModel
+  // internalList represents the list as it is updated by the AppStateModel
   List<int> _internalList;
 
   @override
@@ -426,15 +375,12 @@ class ProductListState extends State<ProductList> {
           ModelFinder<AppStateModel>().of(context).productsInCart.keys.toList(),
       removedItemBuilder: _buildRemovedThumbnail,
     );
-    _internalList = List<int>.from(
-        _list.list); //initialize internal list to ListModel's list
+    _internalList = List<int>.from(_list.list);
   }
 
   Widget _buildRemovedThumbnail(
       int item, BuildContext context, Animation<double> animation) {
-    return ProductThumbnail(
-        animation,
-        animation, // TODO: put in the right animation here!
+    return ProductThumbnail(animation, animation,
         ModelFinder<AppStateModel>().of(context).getProductById(item));
   }
 
@@ -462,8 +408,7 @@ class ProductListState extends State<ProductList> {
           parent: animation),
     );
 
-    AppStateModel model = ModelFinder<AppStateModel>()
-        .of(context); // TODO: don't rely on the ModelFinder
+    AppStateModel model = ModelFinder<AppStateModel>().of(context);
     int productId = _list[index];
     Product product = model.getProductById(productId);
     assert(product != null);
@@ -471,15 +416,16 @@ class ProductListState extends State<ProductList> {
     return ProductThumbnail(thumbnailSize, opacity, product);
   }
 
-  /// If the lists are the same length, assume nothing has changed.
-  /// If the internalList is shorter than the ListModel, an item has been removed.
-  /// If the internalList is longer, then an item has been added.
+  // If the lists are the same length, assume nothing has changed.
+  // If the internalList is shorter than the ListModel, an item has been removed.
+  // If the internalList is longer, then an item has been added.
   void _updateLists() {
+    // Update _internalList based on the model
     _internalList =
         ModelFinder<AppStateModel>().of(context).productsInCart.keys.toList();
     while (_internalList.length != _list.length) {
-      // TODO: make this conditional a Real Thing
       int index = 0;
+      // Check bounds and that the list elements are the same
       while (_internalList.length > 0 &&
           _list.length > 0 &&
           index < _internalList.length &&
@@ -516,14 +462,14 @@ class ProductListState extends State<ProductList> {
 }
 
 class ExtraProductsNumber extends StatelessWidget {
-  /// Calculates the number to be displayed at the end of the row if there are
-  /// more than three products in the cart. This calculates overflow products,
-  /// including their duplicates (but not duplicates of products shown as
-  /// thumbnails).
+  // Calculates the number to be displayed at the end of the row if there are
+  // more than three products in the cart. This calculates overflow products,
+  // including their duplicates (but not duplicates of products shown as
+  // thumbnails).
   int _calculateOverflow(AppStateModel model) {
     Map<int, int> productMap = model.productsInCart;
-    // List created to be able to access products by index instead of ID
-    // Order is guaranteed because productsInCart returns a LinkedHashMap
+    // List created to be able to access products by index instead of ID.
+    // Order is guaranteed because productsInCart returns a LinkedHashMap.
     List<int> products = productMap.keys.toList();
     int overflow = 0;
     int numProducts = products.length;
@@ -538,15 +484,15 @@ class ExtraProductsNumber extends StatelessWidget {
   Widget _buildOverflow(AppStateModel model, BuildContext context) {
     if (model.productsInCart.length > 3) {
       int numOverflowProducts = _calculateOverflow(model);
-      int displayedOverflowProducts = numOverflowProducts <= 99
-          ? numOverflowProducts
-          : 99; // Maximum of 99 so the padding doesn't get funky
+      // Maximum of 99 so padding doesn't get messy.
+      int displayedOverflowProducts =
+          numOverflowProducts <= 99 ? numOverflowProducts : 99;
       return Container(
         child: Text('+$displayedOverflowProducts',
             style: Theme.of(context).primaryTextTheme.button),
       );
     } else {
-      return Container(); //so that this object is never null
+      return Container(); // build() can never return null.
     }
   }
 
@@ -568,7 +514,6 @@ class ProductThumbnail extends StatelessWidget {
   Widget build(BuildContext context) {
     return FadeTransition(
         opacity: opacityAnimation,
-        //duration: Duration(milliseconds: 150),
         child: ScaleTransition(
             scale: animation,
             child: Container(
@@ -587,6 +532,7 @@ class ProductThumbnail extends StatelessWidget {
   }
 }
 
+// ListModel manipulates an internal list and an AnimatedList
 class ListModel {
   ListModel({
     @required this.listKey,
@@ -626,10 +572,11 @@ class ListModel {
   List<int> get list => _items;
 }
 
+// An AnimatedBuilder, but it also takes a model.
 class AnimatedBuilderWithModel extends AnimatedWidget {
   const AnimatedBuilderWithModel(
       {Key key,
-      @required Listenable animation,
+      @required this.animation,
       @required this.builder,
       this.child,
       @required this.model})
@@ -642,7 +589,7 @@ class AnimatedBuilderWithModel extends AnimatedWidget {
 
   final AppStateModel model;
 
-  final animation;
+  final Listenable animation;
 
   @override
   Widget build(BuildContext context) {
@@ -650,70 +597,10 @@ class AnimatedBuilderWithModel extends AnimatedWidget {
   }
 }
 
-// To follow the convention of AnimatedBuilder, use a typedef for the builder
-// the widget parameter in AnimatedBuilder is called TransitionBuilder,
-// because it's called every time the animation changes value. This is similar,
-// but it also takes a model
+// To follow the convention of AnimatedBuilder, a typedef is used for the
+// AnimatedBuilderWithModel builder. The widget parameter in AnimatedBuilder is
+// called TransitionBuilder because it's called every time the animation changes
+// value. This is similar, but it also takes a model.
 
 typedef Widget TransitionWithModelBuilder(
     BuildContext context, Widget child, AppStateModel model);
-
-/// Below code authored by hansmuller
-
-class _Interval {
-  const _Interval(this.start, this.end) : assert(end > start);
-  final double start;
-  final double end;
-  bool contains(double t) => t >= start && t < end;
-  double value(double t) => (t - start) / (end - start);
-  String toString() => '<$start, $end>';
-}
-
-class TweenSequenceElement<T> {
-  const TweenSequenceElement(
-      {@required this.tween, @required this.weight, this.curve})
-      : assert(tween != null),
-        assert(weight != null && weight > 0.0);
-  final Tween<T> tween;
-  final double weight;
-  final Curve curve;
-}
-
-class TweenSequence<T> extends Animatable<T> {
-  TweenSequence({@required this.elements}) {
-    assert(elements != null && elements.isNotEmpty);
-
-    double totalWeight = 0.0;
-    for (TweenSequenceElement<T> element in elements)
-      totalWeight += element.weight;
-
-    double start = 0.0;
-    for (int i = 0; i < elements.length; i++) {
-      final double end = start + elements[i].weight / totalWeight;
-      intervals.add(new _Interval(start, end));
-      start = end;
-    }
-  }
-
-  final List<TweenSequenceElement<T>> elements;
-  final List<_Interval> intervals = <_Interval>[];
-
-  T _evaluate(double t, int index) {
-    final TweenSequenceElement<T> element = elements[index];
-    final double tInterval = intervals[index].value(t);
-    final double tCurve =
-        element.curve == null ? tInterval : element.curve.transform(tInterval);
-    return element.tween.lerp(tCurve);
-  }
-
-  @override
-  T evaluate(Animation<double> animation) {
-    final double t = animation.value;
-    assert(t >= 0.0 && t <= 1.0);
-    if (t == 1.0) return _evaluate(t, elements.length - 1);
-    for (int index = 0; index < elements.length; index++) {
-      if (intervals[index].contains(t)) return _evaluate(t, index);
-    }
-    // no interval contains t? assert failure
-  }
-}
