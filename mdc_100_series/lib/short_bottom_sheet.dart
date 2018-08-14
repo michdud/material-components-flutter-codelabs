@@ -42,9 +42,6 @@ class _ShortBottomSheetState extends State<ShortBottomSheet>
   double _width;
   // Controller for the opening and closing of the ShortBottomSheet
   AnimationController _controller;
-  // Controller for hiding/showing the ShortBottomSheet when the backdrop's frontLayer
-  // is opened and closed.
-  AnimationController _hideController;
   // Tracks the size of the screen so animations can be updated appropriately.
   Size _mediaSize;
   // Animations for the opening and closing of the ShortBottomSheet
@@ -65,15 +62,12 @@ class _ShortBottomSheetState extends State<ShortBottomSheet>
     _updateWidth(0);
     _controller = AnimationController(
         duration: const Duration(milliseconds: 300), vsync: this);
-    _hideController = AnimationController(
-        duration: const Duration(milliseconds: 225), vsync: this);
     _mediaSize = Size.zero;
   }
 
   @override
   void dispose() {
     _controller.dispose();
-    _hideController.dispose();
     super.dispose();
   }
 
@@ -323,7 +317,7 @@ class _ShortBottomSheetState extends State<ShortBottomSheet>
             CurvedAnimation(
                 parent: widget.hideController.view, curve: Curves.easeOut));
     timeDilation = 1.0;
-    
+
     _updateAnimations(context);
 
     return WillPopScope(
