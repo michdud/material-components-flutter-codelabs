@@ -277,10 +277,10 @@ class _ShortBottomSheetState extends State<ShortBottomSheet>
     int numProducts = model.productsInCart.keys.length;
 
     _adjustCartPadding(numProducts);
-    //if (_widthNeedsUpdate(numProducts)){
+    if (_widthNeedsUpdate(numProducts)) {
       _updateWidth(numProducts);
-    _updateAnimations(context);
-  //}
+      _updateAnimations(context);
+    }
 
     return Container(
       width: _widthAnimation.value,
