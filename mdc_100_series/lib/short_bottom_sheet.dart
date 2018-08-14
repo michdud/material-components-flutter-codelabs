@@ -233,8 +233,8 @@ class _ShortBottomSheetState extends State<ShortBottomSheet>
     _cartPadding = numProducts == 0 ? 20.0 : 32.0;
   }
 
-  bool _revealCart(double thumbnailOpacityValue) {
-    if (thumbnailOpacityValue == 0.0) {
+  bool _revealCart() {
+    if (_thumbnailOpacityAnimation.value == 0.0) {
       return true;
     } else {
       return false;
@@ -282,55 +282,33 @@ class _ShortBottomSheetState extends State<ShortBottomSheet>
     // include multiple of the same product).
     int numProducts = model.productsInCart.keys.length;
 
-    // Update the variable used when building the cart padding.
     _adjustCartPadding(numProducts);
-    _updateWidth(numProducts);
+    //if (_widthNeedsUpdate(numProducts)){
+      _updateWidth(numProducts);
     _updateAnimations(context);
+  //}
 
-    Animation<Offset> offsetRect =
-        Tween<Offset>(begin: Offset(0.0, 0.0), end: Offset(1.0, 0.0)).animate(
-            CurvedAnimation(
-                parent: widget.hideController.view, curve: Curves.easeOut));
-
-    return SlideTransition(
-      position: offsetRect,
-      child: Align(
-        alignment: Alignment.bottomRight,
-        child: AnimatedSize(
-          key: _shortBottomSheetKey,
-          duration: Duration(milliseconds: 225),
-          curve: Curves.easeInOut,
-          vsync: this,
-          alignment: FractionalOffset.topLeft,
-          child: GestureDetector(
-            behavior: HitTestBehavior.opaque,
-            onTap: open,
-            child: Container(
-              width: _widthAnimation.value,
-              height: _heightAnimation.value,
-              child: Material(
-                  type: MaterialType.canvas,
-                  animationDuration: Duration(milliseconds: 0),
-                  shape: BeveledRectangleBorder(
-                    borderRadius: BorderRadius.only(
-                        topLeft: Radius.circular(_shapeAnimation.value)),
-                  ),
-                  elevation: 4.0,
-                  color: kShrinePink50,
-                  child: _revealCart(_thumbnailOpacityAnimation.value)
-                      ? _buildShoppingCartPage()
-                      : _buildThumbnails(numProducts)),
-            ),
+    return Container(
+      width: _widthAnimation.value,
+      height: _heightAnimation.value,
+      child: Material(
+          type: MaterialType.canvas,
+          animationDuration: Duration(milliseconds: 0),
+          shape: BeveledRectangleBorder(
+            borderRadius: BorderRadius.only(
+                topLeft: Radius.circular(_shapeAnimation.value)),
           ),
-        ),
-      ),
+          elevation: 4.0,
+          color: kShrinePink50,
+          child: _revealCart()
+              ? _buildShoppingCartPage()
+              : _buildThumbnails(numProducts)),
     );
   }
 
   // Closes the cart if the cart is open, otherwise exits the app (this should
   // only be relevant for Android).
   Future<bool> _onWillPop() {
-    // TODO: Is this a reasonable use of this callback? Do I need to explicitly return a Future?
     if (_isOpen) {
       close();
     } else {
@@ -340,12 +318,36 @@ class _ShortBottomSheetState extends State<ShortBottomSheet>
 
   @override
   Widget build(BuildContext context) {
+    Animation<Offset> offsetRect =
+        Tween<Offset>(begin: Offset(0.0, 0.0), end: Offset(1.0, 0.0)).animate(
+            CurvedAnimation(
+                parent: widget.hideController.view, curve: Curves.easeOut));
     timeDilation = 1.0;
+
+    _updateAnimations(context);
+
     return WillPopScope(
       onWillPop: _onWillPop,
-      child: ScopedModelDescendant<AppStateModel>(
-        builder: (context, child, model) => AnimatedBuilderWithModel(
-            builder: _buildCart, animation: _controller, model: model),
+      child: SlideTransition(
+        position: offsetRect,
+        child: Align(
+          alignment: Alignment.bottomRight,
+          child: AnimatedSize(
+            key: _shortBottomSheetKey,
+            duration: Duration(milliseconds: 225),
+            curve: Curves.easeInOut,
+            vsync: this,
+            alignment: FractionalOffset.topLeft,
+            child: GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: open,
+              child: ScopedModelDescendant<AppStateModel>(
+                builder: (context, child, model) => AnimatedBuilderWithModel(
+                    builder: _buildCart, animation: _controller, model: model),
+              ),
+            ),
+          ),
+        ),
       ),
     );
   }

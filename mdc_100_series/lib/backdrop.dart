@@ -16,9 +16,6 @@ import 'package:flutter/material.dart';
 import 'package:meta/meta.dart';
 
 import 'login.dart';
-import 'model/product.dart';
-import 'shopping_cart.dart';
-import 'short_bottom_sheet.dart';
 
 const double _kFlingVelocity = 2.0;
 
@@ -148,22 +145,17 @@ class _BackdropTitle extends AnimatedWidget {
 /// can make a selection. The user can also configure the titles for when the
 /// front or back layer is showing.
 class Backdrop extends StatefulWidget {
-  final Category currentCategory;
   final Widget frontLayer;
   final Widget backLayer;
   final Widget frontTitle;
   final Widget backTitle;
-  final BoolCallback toggleSheet;
 
   const Backdrop({
-    @required this.currentCategory,
     @required this.frontLayer,
     @required this.backLayer,
     @required this.frontTitle,
     @required this.backTitle,
-    this.toggleSheet
-  })  : assert(currentCategory != null),
-        assert(frontLayer != null),
+  })  : assert(frontLayer != null),
         assert(backLayer != null),
         assert(frontTitle != null),
         assert(backTitle != null);
@@ -188,17 +180,6 @@ class _BackdropState extends State<Backdrop>
   }
 
   @override
-  void didUpdateWidget(Backdrop old) {
-    super.didUpdateWidget(old);
-
-    if (widget.currentCategory != old.currentCategory) {
-      _toggleBackdropLayerVisibility();
-    } else if (!_frontLayerVisible) {
-      _controller.fling(velocity: _kFlingVelocity);
-    }
-  }
-
-  @override
   void dispose() {
     _controller.dispose();
     super.dispose();
@@ -213,7 +194,6 @@ class _BackdropState extends State<Backdrop>
   void _toggleBackdropLayerVisibility() {
     _controller.fling(
         velocity: _frontLayerVisible ? -_kFlingVelocity : _kFlingVelocity);
-    widget.toggleSheet(_frontLayerVisible);
   }
 
   Widget _buildStack(BuildContext context, BoxConstraints constraints) {
@@ -293,5 +273,3 @@ class _BackdropState extends State<Backdrop>
     );
   }
 }
-
-typedef BoolCallback = void Function(bool condition);

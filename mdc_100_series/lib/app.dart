@@ -20,7 +20,6 @@ import 'home.dart';
 import 'login.dart';
 import 'short_bottom_sheet.dart';
 import 'category_menu_page.dart';
-import 'model/product.dart';
 import 'supplemental/cut_corners_border.dart';
 
 class ShrineApp extends StatefulWidget {
@@ -30,7 +29,6 @@ class ShrineApp extends StatefulWidget {
 
 class _ShrineAppState extends State<ShrineApp>
     with SingleTickerProviderStateMixin {
-  Category _currentCategory = Category.all;
 
   AnimationController slideBottomSheetController;
 
@@ -49,34 +47,23 @@ class _ShrineAppState extends State<ShrineApp>
 
   @override
   Widget build(BuildContext context) {
+    ShortBottomSheet sbs = ShortBottomSheet(hideController: slideBottomSheetController);
+    assert(sbs != null);
     return MaterialApp(
       title: 'Shrine',
       home: HomePage(
         backdrop: Backdrop(
-          currentCategory: _currentCategory,
-          frontLayer: ProductPage(category: _currentCategory),
-          backLayer: CategoryMenuPage(
-            currentCategory: _currentCategory,
-            onCategoryTap: _onCategoryTap,
-          ),
+          frontLayer: ProductPage(),
+          backLayer: CategoryMenuPage(),
           frontTitle: Text('SHRINE'),
           backTitle: Text('MENU'),
-          toggleSheet: toggleShortBottomSheet,
         ),
-        shortBottomSheet:
-            ShortBottomSheet(hideController: slideBottomSheetController),
+        shortBottomSheet: sbs,
       ),
       initialRoute: '/login',
       onGenerateRoute: _getRoute,
       theme: _kShrineTheme,
     );
-  }
-
-  /// Function to call when a [Category] is tapped.
-  void _onCategoryTap(Category category) {
-    setState(() {
-      _currentCategory = category;
-    });
   }
 }
 

@@ -13,31 +13,26 @@
 // limitations under the License.
 
 import 'package:flutter/material.dart';
-import 'package:meta/meta.dart';
+import 'package:scoped_model/scoped_model.dart';
 
 import 'colors.dart';
+import 'model/app_state_model.dart';
 import 'package:Shrine/model/product.dart';
 
 class CategoryMenuPage extends StatelessWidget {
-  final Category currentCategory;
-  final ValueChanged<Category> onCategoryTap;
   final List<Category> _categories = Category.values;
 
-  const CategoryMenuPage({
-    Key key,
-    @required this.currentCategory,
-    @required this.onCategoryTap,
-  })  : assert(currentCategory != null),
-        assert(onCategoryTap != null);
+  const CategoryMenuPage({Key key});
 
   Widget _buildCategory(Category category, BuildContext context) {
     final categoryString =
         category.toString().replaceAll('Category.', '').toUpperCase();
     final ThemeData theme = Theme.of(context);
-    return GestureDetector(
-      onTap: () => onCategoryTap(category),
-      child: category == currentCategory
-        ? Column(
+    return ScopedModelDescendant<AppStateModel>(
+      builder: (context, child, model) => GestureDetector(
+        onTap: () => model.setCategory(category),
+        child: model.selectedCategory == category
+            ? Column(
           children: <Widget>[
             SizedBox(height: 16.0),
             Text(
@@ -53,14 +48,14 @@ class CategoryMenuPage extends StatelessWidget {
             ),
           ],
         )
-      : Padding(
-        padding: EdgeInsets.symmetric(vertical: 16.0),
-        child: Text(
-          categoryString,
-          style: theme.textTheme.body2.copyWith(
-              color: kShrineBrown900.withAlpha(153)
-            ),
-          textAlign: TextAlign.center,
+            : Padding(
+          padding: EdgeInsets.symmetric(vertical: 16.0),
+          child: Text(
+            categoryString,
+            style: theme.textTheme.body2
+                .copyWith(color: kShrineBrown900.withAlpha(153)),
+            textAlign: TextAlign.center,
+          ),
         ),
       ),
     );
@@ -73,9 +68,9 @@ class CategoryMenuPage extends StatelessWidget {
         padding: EdgeInsets.only(top: 40.0),
         color: kShrinePink100,
         child: ListView(
-          children: _categories
-            .map((Category c) => _buildCategory(c, context))
-            .toList()),
+            children: _categories
+                .map((Category c) => _buildCategory(c, context))
+                .toList()),
       ),
     );
   }
