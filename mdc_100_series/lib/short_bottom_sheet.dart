@@ -83,54 +83,21 @@ class _ShortBottomSheetState extends State<ShortBottomSheet>
   // using the size of the screen.
   void _updateAnimations(BuildContext context) {
     _mediaSize = MediaQuery.of(context).size;
-    double mediaWidth = _mediaSize.width;
-    double mediaHeight = _mediaSize.height;
 
-    _widthAnimation = TweenSequence(
-      <TweenSequenceItem<double>>[
-        TweenSequenceItem<double>(
-          // 1/6 of duration = 40% (0.4) of property delta
-          tween: Tween<double>(
-                  begin: _width, end: _width + (mediaWidth - _width) * 0.4)
-              .chain(CurveTween(curve: _accelerateCurve)),
-          weight: 1.0 / 6.0,
-        ),
-        new TweenSequenceItem<double>(
-          tween: Tween<double>(
-                  begin: _width + (mediaWidth - _width) * 0.4, end: mediaWidth)
-              .chain(CurveTween(curve: _decelerateCurve)),
-          weight: 5.0 / 6.0,
-        ),
-      ],
-    ).animate(
+    _widthAnimation = Tween<double>(begin: _width, end: _mediaSize.width).animate(
       CurvedAnimation(
           parent: _controller,
           curve: _controller.status == AnimationStatus.forward
-              ? Interval(0.0, 0.35)
-              : Interval(0.17, 0.72)),
+              ? Interval(0.0, 0.35, curve: Curves.easeInOut)
+              : Interval(0.17, 0.72, curve: Curves.easeInOut)),
     );
 
-    _heightAnimation = TweenSequence(
-      <TweenSequenceItem<double>>[
-        TweenSequenceItem<double>(
-          tween: Tween<double>(
-                  begin: _cartHeight, end: (mediaHeight - _cartHeight) * 0.4)
-              .chain(CurveTween(curve: _accelerateCurve)),
-          weight: 1.0 / 6.0,
-        ),
-        TweenSequenceItem<double>(
-          tween: Tween<double>(
-                  begin: (mediaHeight - _cartHeight) * 0.4, end: mediaHeight)
-              .chain(CurveTween(curve: _decelerateCurve)),
-          weight: 5.0 / 6.0,
-        ),
-      ],
-    ).animate(
+    _heightAnimation = Tween<double>(begin: _cartHeight, end: _mediaSize.height).animate(
       CurvedAnimation(
           parent: _controller,
           curve: _controller.status == AnimationStatus.forward
-              ? Interval(0.0, 1.0)
-              : Interval(0.2, 1.0)),
+              ? Interval(0.0, 1.0, curve: Curves.easeInOut)
+              : Interval(0.2, 1.0, curve: Curves.easeInOut)),
     );
 
     _thumbnailOpacityAnimation = Tween<double>(begin: 1.0, end: 0.0).animate(
@@ -149,25 +116,12 @@ class _ShortBottomSheetState extends State<ShortBottomSheet>
               : Interval(0.75, 1.0, curve: Curves.linear)),
     );
 
-    _shapeAnimation = TweenSequence(
-      <TweenSequenceItem<double>>[
-        TweenSequenceItem<double>(
-          tween: Tween<double>(begin: 24.0, end: (24.0 - 0.0) * 0.4)
-              .chain(CurveTween(curve: _accelerateCurve)),
-          weight: 1.0 / 6.0,
-        ),
-        TweenSequenceItem<double>(
-          tween: Tween<double>(begin: (24.0 - 0.0) * 0.4, end: 0.0)
-              .chain(CurveTween(curve: _decelerateCurve)),
-          weight: 5.0 / 6.0,
-        ),
-      ],
-    ).animate(
+    _shapeAnimation = Tween<double>(begin: 24.0, end: 0.0).animate(
       CurvedAnimation(
           parent: _controller,
           curve: _controller.status == AnimationStatus.forward
-              ? Interval(0.0, 0.35)
-              : Interval(0.17, 0.72)),
+              ? Interval(0.0, 0.35, curve: Curves.easeInOut)
+              : Interval(0.17, 0.72, curve: Curves.easeInOut)),
     );
   }
 
