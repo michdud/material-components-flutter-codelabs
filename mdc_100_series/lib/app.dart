@@ -47,8 +47,6 @@ class _ShrineAppState extends State<ShrineApp>
 
   @override
   Widget build(BuildContext context) {
-    ShortBottomSheet sbs = ShortBottomSheet(hideController: slideBottomSheetController);
-    assert(sbs != null);
     return MaterialApp(
       title: 'Shrine',
       home: HomePage(
@@ -57,8 +55,10 @@ class _ShrineAppState extends State<ShrineApp>
           backLayer: CategoryMenuPage(),
           frontTitle: Text('SHRINE'),
           backTitle: Text('MENU'),
+          toggleSheet: toggleShortBottomSheet,
         ),
-        shortBottomSheet: sbs,
+        shortBottomSheet:
+            ShortBottomSheet(hideController: slideBottomSheetController),
       ),
       initialRoute: '/login',
       onGenerateRoute: _getRoute,

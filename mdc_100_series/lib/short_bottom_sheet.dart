@@ -323,7 +323,7 @@ class _ShortBottomSheetState extends State<ShortBottomSheet>
             CurvedAnimation(
                 parent: widget.hideController.view, curve: Curves.easeOut));
     timeDilation = 1.0;
-
+    
     _updateAnimations(context);
 
     return WillPopScope(
