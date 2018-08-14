@@ -82,7 +82,6 @@ class _ShortBottomSheetState extends State<ShortBottomSheet>
   // Updates the animations for the opening/closing of the ShortBottomSheet,
   // using the size of the screen.
   void _updateAnimations(BuildContext context) {
-    print('updateanimations');
     _mediaSize = MediaQuery.of(context).size;
 
     _widthAnimation =
@@ -234,10 +233,12 @@ class _ShortBottomSheetState extends State<ShortBottomSheet>
     int numProducts = model.productsInCart.keys.length;
 
     _adjustCartPadding(numProducts);
-    if (_widthNeedsUpdate(numProducts)) {
+    // Can't use conditional because animations currently rely on controller
+    // state to determine their intervals.
+    //if (_widthNeedsUpdate(numProducts)) {
       _updateWidth(numProducts);
       _updateAnimations(context);
-    }
+    //}
 
     return Container(
       width: _widthAnimation.value,
