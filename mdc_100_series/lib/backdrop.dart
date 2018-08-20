@@ -251,7 +251,7 @@ class _BackdropState extends State<Backdrop>
           },
         ),*/
         IconButton(
-          icon: const Icon(Icons.search),
+          icon: const Icon(Icons.search, semanticLabel: "Login"),
           onPressed: () {
             Navigator.push(
               context,
@@ -260,7 +260,7 @@ class _BackdropState extends State<Backdrop>
           },
         ),
         IconButton(
-          icon: const Icon(Icons.tune),
+          icon: const Icon(Icons.tune, semanticLabel: "Login"),
           onPressed: () {
             Navigator.push(
               context,
