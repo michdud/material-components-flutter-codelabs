@@ -26,7 +26,7 @@ class ShortBottomSheet extends StatefulWidget {
     if (nullOk || result != null) {
       return result;
     }
-    throw new FlutterError(
+    throw FlutterError(
         'ShortBottomSheet.of() called with a context that does not contain a ShortBottomSheet.\n');
   }
 }
@@ -209,16 +209,21 @@ class _ShortBottomSheetState extends State<ShortBottomSheet>
   // Opens the ShortBottomSheet if it's open, otherwise does nothing.
   void open() {
     if (!_isOpen) {
-      _controller.forward();
+      setState(() {
+        _controller.forward();
+      });
     }
   }
 
   // Closes the ShortBottomSheet if it's open, otherwise does nothing.
   void close() {
     if (_isOpen) {
-      _controller.reverse();
+      setState(() {
+        _controller.reverse();
+      });
     }
   }
+
 
   // Changes the padding between the left edge of the Material and the cart icon
   // based on the number of products in the cart (padding increases when > 0
@@ -241,7 +246,8 @@ class _ShortBottomSheetState extends State<ShortBottomSheet>
       child: Column(children: <Widget>[
         Row(children: <Widget>[
           AnimatedPadding(
-              padding: EdgeInsets.only(left: _cartPadding, right: 8.0),
+              padding: EdgeInsets.only(
+                  left: _cartPadding, right: 8.0),
               child: Icon(
                 Icons.shopping_cart,
                 semanticLabel: "Cart",
@@ -250,11 +256,20 @@ class _ShortBottomSheetState extends State<ShortBottomSheet>
           Container(
             width: numProducts > 3
                 ? _width - 96 // Accounts for the overflow number
+            width: ModelFinder<AppStateModel>()
+                .of(context).productsInCart.keys.length > 3
+                ? _width - 94 // Accounts for the overflow number
                 : _width - 64,
             height: _cartHeight,
             child: Padding(
               padding: EdgeInsets.only(top: 8.0, bottom: 8.0),
-              child: ProductList(),
+              child: ProductList(listChange: () {
+                int numProducts = ModelFinder<AppStateModel>().of(context).productsInCart.keys.length;
+                _adjustCartPadding(numProducts);
+                _updateWidth(numProducts);
+                _updateAnimations(context);
+                print(numProducts);
+              }),
             ),
           ),
           ExtraProductsNumber()
@@ -271,10 +286,10 @@ class _ShortBottomSheetState extends State<ShortBottomSheet>
         opacity: _cartOpacityAnimation.value, child: ShoppingCartPage());
   }
 
-  Widget _buildCart(BuildContext context, Widget child, AppStateModel model) {
+  Widget _buildCart(BuildContext context, Widget child) {
     // numProducts is the number of different products in the cart (does not
     // include multiple of the same product).
-    int numProducts = model.productsInCart.keys.length;
+    int numProducts = ModelFinder<AppStateModel>().of(context).productsInCart.keys.length;
 
     _adjustCartPadding(numProducts);
     // This currently can't be within a conditional because the animations need
@@ -298,7 +313,7 @@ class _ShortBottomSheetState extends State<ShortBottomSheet>
           color: kShrinePink50,
           child: _revealCart()
               ? _buildShoppingCartPage()
-              : _buildThumbnails(numProducts)),
+              : _buildThumbnails(context)),
     );
   }
 
@@ -338,8 +353,10 @@ class _ShortBottomSheetState extends State<ShortBottomSheet>
               behavior: HitTestBehavior.opaque,
               onTap: open,
               child: ScopedModelDescendant<AppStateModel>(
-                builder: (context, child, model) => AnimatedBuilderWithModel(
-                    builder: _buildCart, animation: _controller, model: model),
+                builder: (context, child, model) => AnimatedBuilder(
+                      builder: _buildCart,
+                      animation: _controller,
+                    ),
               ),
             ),
           ),
@@ -350,6 +367,10 @@ class _ShortBottomSheetState extends State<ShortBottomSheet>
 }
 
 class ProductList extends StatefulWidget {
+  final VoidCallback listChange;
+
+  ProductList({this.listChange});
+
   @override
   ProductListState createState() {
     return ProductListState();
@@ -372,6 +393,7 @@ class ProductListState extends State<ProductList> {
       initialItems:
           ModelFinder<AppStateModel>().of(context).productsInCart.keys.toList(),
       removedItemBuilder: _buildRemovedThumbnail,
+      listChange: widget.listChange,
     );
     _internalList = List<int>.from(_list.list);
   }
@@ -438,6 +460,8 @@ class ProductListState extends State<ProductList> {
         _list.insert(_list.length, _internalList[index]);
       }
     }
+    print('insert');
+    widget.listChange();
   }
 
   Widget _buildAnimatedList() {
@@ -536,6 +560,7 @@ class ListModel {
     @required this.listKey,
     @required this.removedItemBuilder,
     Iterable<int> initialItems,
+    this.listChange
   })  : assert(listKey != null),
         assert(removedItemBuilder != null),
         _items = List<int>.from(initialItems ?? <int>[]);
@@ -543,12 +568,14 @@ class ListModel {
   final GlobalKey<AnimatedListState> listKey;
   final dynamic removedItemBuilder;
   final List<int> _items;
+  final VoidCallback listChange;
 
   AnimatedListState get _animatedList => listKey.currentState;
 
   void insert(int index, int item) {
     _items.insert(index, item);
     _animatedList.insertItem(index, duration: Duration(milliseconds: 225));
+    listChange();
   }
 
   int removeAt(int index) {
@@ -558,6 +585,7 @@ class ListModel {
           (BuildContext context, Animation<double> animation) {
         return removedItemBuilder(removedItem, context, animation);
       });
+      listChange();
     }
   }
 
@@ -568,31 +596,6 @@ class ListModel {
   int indexOf(int item) => _items.indexOf(item);
 
   List<int> get list => _items;
-}
-
-// An AnimatedBuilder, but it also takes a model.
-class AnimatedBuilderWithModel extends AnimatedWidget {
-  const AnimatedBuilderWithModel(
-      {Key key,
-      @required this.animation,
-      @required this.builder,
-      this.child,
-      @required this.model})
-      : assert(builder != null),
-        super(key: key, listenable: animation);
-
-  final TransitionWithModelBuilder builder;
-
-  final Widget child;
-
-  final AppStateModel model;
-
-  final Listenable animation;
-
-  @override
-  Widget build(BuildContext context) {
-    return builder(context, child, model);
-  }
 }
 
 // To follow the convention of AnimatedBuilder, a typedef is used for the
