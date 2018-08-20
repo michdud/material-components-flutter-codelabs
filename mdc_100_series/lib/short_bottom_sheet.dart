@@ -11,9 +11,8 @@ import 'package:flutter/scheduler.dart' show timeDilation;
 import 'dart:async';
 
 class ShortBottomSheet extends StatefulWidget {
-  const ShortBottomSheet({Key key, this.hideController}) : super(key: key);
-
   final AnimationController hideController;
+  const ShortBottomSheet({Key key, this.hideController}) : super(key: key);
 
   @override
   _ShortBottomSheetState createState() => _ShortBottomSheetState();
@@ -69,14 +68,6 @@ class _ShortBottomSheetState extends State<ShortBottomSheet>
   void dispose() {
     _controller.dispose();
     super.dispose();
-  }
-
-  // Returns true if the screen size has changed, false otherwise.
-  bool _dimensionsNeedUpdate(BuildContext context) {
-    if (_mediaSize != MediaQuery.of(context).size) {
-      return true;
-    }
-    return false;
   }
 
   // Updates the animations for the opening/closing of the ShortBottomSheet,
@@ -187,13 +178,6 @@ class _ShortBottomSheetState extends State<ShortBottomSheet>
     }
   }
 
-  bool _widthNeedsUpdate(int numProducts) {
-    if (_width != _getWidth(numProducts)) {
-      return true;
-    }
-    return false;
-  }
-
   // Updates _width based on the number of products in the cart.
   void _updateWidth(int numProducts) {
     _width = _getWidth(numProducts);
@@ -248,7 +232,6 @@ class _ShortBottomSheetState extends State<ShortBottomSheet>
               padding: EdgeInsets.only(left: _cartPadding, right: 8.0),
               child: Icon(
                 Icons.shopping_cart,
-                semanticLabel: "Cart",
               ),
               duration: Duration(milliseconds: 225)),
           Container(
@@ -263,12 +246,7 @@ class _ShortBottomSheetState extends State<ShortBottomSheet>
             height: _cartHeight,
             child: Padding(
               padding: EdgeInsets.only(top: 8.0, bottom: 8.0),
-              child: ProductList(listChange: () {
-                _adjustCartPadding(numProducts);
-                _updateWidth(numProducts);
-                _updateAnimations(context);
-                print(numProducts);
-              }),
+              child: ProductList(),
             ),
           ),
           ExtraProductsNumber()
@@ -292,12 +270,8 @@ class _ShortBottomSheetState extends State<ShortBottomSheet>
         ModelFinder<AppStateModel>().of(context).productsInCart.keys.length;
 
     _adjustCartPadding(numProducts);
-    // This currently can't be within a conditional because the animations need
-    // to be updated so that they can change on reverse.
-    //if (_widthNeedsUpdate(numProducts)) {
     _updateWidth(numProducts);
     _updateAnimations(context);
-    //}
 
     return Container(
       width: _widthAnimation.value,
@@ -335,20 +309,19 @@ class _ShortBottomSheetState extends State<ShortBottomSheet>
                 parent: widget.hideController.view, curve: Curves.easeOut));
     timeDilation = 1.0;
 
-    _updateAnimations(context);
-
-    return WillPopScope(
-      onWillPop: _onWillPop,
-      child: SlideTransition(
-        position: offsetRect,
-        child: Align(
-          alignment: Alignment.bottomRight,
-          child: AnimatedSize(
-            key: _shortBottomSheetKey,
-            duration: Duration(milliseconds: 225),
-            curve: Curves.easeInOut,
-            vsync: this,
-            alignment: FractionalOffset.topLeft,
+    return AnimatedSize(
+      key: _shortBottomSheetKey,
+      duration: Duration(milliseconds: 225),
+      curve: Curves.easeInOut,
+      vsync: this,
+      alignment: FractionalOffset.topLeft,
+      child: Semantics(
+        button: true,
+        value: "Shopping cart",
+        child: WillPopScope(
+          onWillPop: _onWillPop,
+          child: SlideTransition(
+            position: offsetRect,
             child: GestureDetector(
               behavior: HitTestBehavior.opaque,
               onTap: open,
@@ -361,16 +334,12 @@ class _ShortBottomSheetState extends State<ShortBottomSheet>
             ),
           ),
         ),
-      ), //),
+      ),
     );
   }
 }
 
 class ProductList extends StatefulWidget {
-  final VoidCallback listChange;
-
-  ProductList({this.listChange});
-
   @override
   ProductListState createState() {
     return ProductListState();
@@ -393,7 +362,6 @@ class ProductListState extends State<ProductList> {
       initialItems:
           ModelFinder<AppStateModel>().of(context).productsInCart.keys.toList(),
       removedItemBuilder: _buildRemovedThumbnail,
-      listChange: widget.listChange,
     );
     _internalList = List<int>.from(_list.list);
   }
@@ -460,8 +428,6 @@ class ProductListState extends State<ProductList> {
         _list.insert(_list.length, _internalList[index]);
       }
     }
-    print('insert');
-    widget.listChange();
   }
 
   Widget _buildAnimatedList() {
@@ -559,8 +525,7 @@ class ListModel {
   ListModel(
       {@required this.listKey,
       @required this.removedItemBuilder,
-      Iterable<int> initialItems,
-      this.listChange})
+      Iterable<int> initialItems})
       : assert(listKey != null),
         assert(removedItemBuilder != null),
         _items = List<int>.from(initialItems ?? <int>[]);
@@ -568,14 +533,12 @@ class ListModel {
   final GlobalKey<AnimatedListState> listKey;
   final dynamic removedItemBuilder;
   final List<int> _items;
-  final VoidCallback listChange;
 
   AnimatedListState get _animatedList => listKey.currentState;
 
   void insert(int index, int item) {
     _items.insert(index, item);
     _animatedList.insertItem(index, duration: Duration(milliseconds: 225));
-    listChange();
   }
 
   int removeAt(int index) {
@@ -585,7 +548,6 @@ class ListModel {
           (BuildContext context, Animation<double> animation) {
         return removedItemBuilder(removedItem, context, animation);
       });
-      listChange();
     }
   }
 
@@ -597,11 +559,3 @@ class ListModel {
 
   List<int> get list => _items;
 }
-
-// To follow the convention of AnimatedBuilder, a typedef is used for the
-// AnimatedBuilderWithModel builder. The widget parameter in AnimatedBuilder is
-// called TransitionBuilder because it's called every time the animation changes
-// value. This is similar, but it also takes a model.
-
-typedef Widget TransitionWithModelBuilder(
-    BuildContext context, Widget child, AppStateModel model);
