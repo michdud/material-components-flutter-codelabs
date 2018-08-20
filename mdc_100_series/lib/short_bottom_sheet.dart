@@ -224,7 +224,6 @@ class _ShortBottomSheetState extends State<ShortBottomSheet>
     }
   }
 
-
   // Changes the padding between the left edge of the Material and the cart icon
   // based on the number of products in the cart (padding increases when > 0
   // products.)
@@ -246,25 +245,25 @@ class _ShortBottomSheetState extends State<ShortBottomSheet>
       child: Column(children: <Widget>[
         Row(children: <Widget>[
           AnimatedPadding(
-              padding: EdgeInsets.only(
-                  left: _cartPadding, right: 8.0),
+              padding: EdgeInsets.only(left: _cartPadding, right: 8.0),
               child: Icon(
                 Icons.shopping_cart,
                 semanticLabel: "Cart",
               ),
               duration: Duration(milliseconds: 225)),
           Container(
-            width: numProducts > 3
-                ? _width - 96 // Accounts for the overflow number
             width: ModelFinder<AppStateModel>()
-                .of(context).productsInCart.keys.length > 3
+                        .of(context)
+                        .productsInCart
+                        .keys
+                        .length >
+                    3
                 ? _width - 94 // Accounts for the overflow number
                 : _width - 64,
             height: _cartHeight,
             child: Padding(
               padding: EdgeInsets.only(top: 8.0, bottom: 8.0),
               child: ProductList(listChange: () {
-                int numProducts = ModelFinder<AppStateModel>().of(context).productsInCart.keys.length;
                 _adjustCartPadding(numProducts);
                 _updateWidth(numProducts);
                 _updateAnimations(context);
@@ -289,14 +288,15 @@ class _ShortBottomSheetState extends State<ShortBottomSheet>
   Widget _buildCart(BuildContext context, Widget child) {
     // numProducts is the number of different products in the cart (does not
     // include multiple of the same product).
-    int numProducts = ModelFinder<AppStateModel>().of(context).productsInCart.keys.length;
+    int numProducts =
+        ModelFinder<AppStateModel>().of(context).productsInCart.keys.length;
 
     _adjustCartPadding(numProducts);
     // This currently can't be within a conditional because the animations need
     // to be updated so that they can change on reverse.
     //if (_widthNeedsUpdate(numProducts)) {
-      _updateWidth(numProducts);
-      _updateAnimations(context);
+    _updateWidth(numProducts);
+    _updateAnimations(context);
     //}
 
     return Container(
@@ -313,7 +313,7 @@ class _ShortBottomSheetState extends State<ShortBottomSheet>
           color: kShrinePink50,
           child: _revealCart()
               ? _buildShoppingCartPage()
-              : _buildThumbnails(context)),
+              : _buildThumbnails(numProducts)),
     );
   }
 
@@ -361,7 +361,7 @@ class _ShortBottomSheetState extends State<ShortBottomSheet>
             ),
           ),
         ),
-      ),
+      ), //),
     );
   }
 }
@@ -556,12 +556,12 @@ class ProductThumbnail extends StatelessWidget {
 
 // ListModel manipulates an internal list and an AnimatedList
 class ListModel {
-  ListModel({
-    @required this.listKey,
-    @required this.removedItemBuilder,
-    Iterable<int> initialItems,
-    this.listChange
-  })  : assert(listKey != null),
+  ListModel(
+      {@required this.listKey,
+      @required this.removedItemBuilder,
+      Iterable<int> initialItems,
+      this.listChange})
+      : assert(listKey != null),
         assert(removedItemBuilder != null),
         _items = List<int>.from(initialItems ?? <int>[]);
 
