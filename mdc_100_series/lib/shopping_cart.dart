@@ -214,7 +214,7 @@ class ShoppingCartRow extends StatelessWidget {
           SizedBox(
             width: _leftColumnWidth,
             child: IconButton(
-              icon: const Icon(Icons.remove_circle_outline),
+              icon: Icon(Icons.remove_circle_outline),
               onPressed: onPressed,
             ),
           ),

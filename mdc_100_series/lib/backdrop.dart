@@ -16,8 +16,6 @@ import 'package:flutter/material.dart';
 import 'package:meta/meta.dart';
 
 import 'login.dart';
-import 'shopping_cart.dart';
-import 'short_bottom_sheet.dart';
 
 const double _kFlingVelocity = 2.0;
 
@@ -240,16 +238,6 @@ class _BackdropState extends State<Backdrop>
         backTitle: widget.backTitle,
       ),
       actions: <Widget>[
-       /* IconButton(
-          icon: const Icon(Icons.shopping_cart),
-          onPressed: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                  builder: (BuildContext context) => ShoppingCartPage()),
-            );
-          },
-        ),*/
         IconButton(
           icon: const Icon(Icons.search, semanticLabel: "Login"),
           onPressed: () {

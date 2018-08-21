@@ -41,8 +41,6 @@ class _ShortBottomSheetState extends State<ShortBottomSheet>
   double _width;
   // Controller for the opening and closing of the ShortBottomSheet
   AnimationController _controller;
-  // Tracks the size of the screen so animations can be updated appropriately.
-  Size _mediaSize;
   // Animations for the opening and closing of the ShortBottomSheet
   Animation<double> _widthAnimation;
   Animation<double> _heightAnimation;
@@ -61,7 +59,6 @@ class _ShortBottomSheetState extends State<ShortBottomSheet>
     _updateWidth(0);
     _controller = AnimationController(
         duration: const Duration(milliseconds: 300), vsync: this);
-    _mediaSize = Size.zero;
   }
 
   @override
@@ -73,9 +70,9 @@ class _ShortBottomSheetState extends State<ShortBottomSheet>
   // Updates the animations for the opening/closing of the ShortBottomSheet,
   // using the size of the screen.
   void _updateAnimations(BuildContext context) {
-    _mediaSize = MediaQuery.of(context).size;
-    double mediaWidth = _mediaSize.width;
-    double mediaHeight = _mediaSize.height;
+    Size screenSize = MediaQuery.of(context).size;
+    double mediaWidth = screenSize.width;
+    double mediaHeight = screenSize.height;
 
     _widthAnimation = TweenSequence(
       <TweenSequenceItem<double>>[
@@ -224,37 +221,39 @@ class _ShortBottomSheetState extends State<ShortBottomSheet>
   }
 
   Widget _buildThumbnails(int numProducts) {
-    return Opacity(
-      opacity: _thumbnailOpacityAnimation.value,
-      child: Column(children: <Widget>[
-        Row(children: <Widget>[
-          AnimatedPadding(
-              padding: EdgeInsets.only(left: _cartPadding, right: 8.0),
-              child: Icon(
-                Icons.shopping_cart,
+    return ExcludeSemantics(
+      child: Opacity(
+        opacity: _thumbnailOpacityAnimation.value,
+        child: Column(children: <Widget>[
+          Row(children: <Widget>[
+            AnimatedPadding(
+                padding: EdgeInsets.only(left: _cartPadding, right: 8.0),
+                child: Icon(
+                  Icons.shopping_cart,
+                ),
+                duration: Duration(milliseconds: 225)),
+            Container(
+              width: ModelFinder<AppStateModel>()
+                          .of(context)
+                          .productsInCart
+                          .keys
+                          .length >
+                      3
+                  ? _width - 94 // Accounts for the overflow number
+                  : _width - 64,
+              height: _cartHeight,
+              child: Padding(
+                padding: EdgeInsets.only(top: 8.0, bottom: 8.0),
+                child: ProductList(),
               ),
-              duration: Duration(milliseconds: 225)),
-          Container(
-            width: ModelFinder<AppStateModel>()
-                        .of(context)
-                        .productsInCart
-                        .keys
-                        .length >
-                    3
-                ? _width - 94 // Accounts for the overflow number
-                : _width - 64,
-            height: _cartHeight,
-            child: Padding(
-              padding: EdgeInsets.only(top: 8.0, bottom: 8.0),
-              child: ProductList(),
             ),
-          ),
-          ExtraProductsNumber()
+            ExtraProductsNumber()
+          ]),
+          // Ensures the thumbnails are "pinned" to the top left when opening the
+          // sheet by filling the space beneath them.
+          Expanded(child: Container())
         ]),
-        // Ensures the thumbnails are "pinned" to the top left when opening the
-        // sheet by filling the space beneath them.
-        Expanded(child: Container())
-      ]),
+      ),
     );
   }
 
@@ -266,28 +265,33 @@ class _ShortBottomSheetState extends State<ShortBottomSheet>
   Widget _buildCart(BuildContext context, Widget child) {
     // numProducts is the number of different products in the cart (does not
     // include multiple of the same product).
-    int numProducts =
-        ModelFinder<AppStateModel>().of(context).productsInCart.keys.length;
+    AppStateModel model = ModelFinder<AppStateModel>().of(context);
+    int numProducts = model.productsInCart.keys.length;
+    int totalCartQuantity = model.totalCartQuantity;
 
     _adjustCartPadding(numProducts);
     _updateWidth(numProducts);
     _updateAnimations(context);
 
-    return Container(
-      width: _widthAnimation.value,
-      height: _heightAnimation.value,
-      child: Material(
-          type: MaterialType.canvas,
-          animationDuration: Duration(milliseconds: 0),
-          shape: BeveledRectangleBorder(
-            borderRadius: BorderRadius.only(
-                topLeft: Radius.circular(_shapeAnimation.value)),
-          ),
-          elevation: 4.0,
-          color: kShrinePink50,
-          child: _revealCart()
-              ? _buildShoppingCartPage()
-              : _buildThumbnails(numProducts)),
+    return Semantics(
+      button: true,
+      value: "Shopping cart, $totalCartQuantity items",
+      child: Container(
+        width: _widthAnimation.value,
+        height: _heightAnimation.value,
+        child: Material(
+            type: MaterialType.canvas,
+            animationDuration: Duration(milliseconds: 0),
+            shape: BeveledRectangleBorder(
+              borderRadius: BorderRadius.only(
+                  topLeft: Radius.circular(_shapeAnimation.value)),
+            ),
+            elevation: 4.0,
+            color: kShrinePink50,
+            child: _revealCart()
+                ? _buildShoppingCartPage()
+                : _buildThumbnails(numProducts)),
+      ),
     );
   }
 
@@ -315,22 +319,18 @@ class _ShortBottomSheetState extends State<ShortBottomSheet>
       curve: Curves.easeInOut,
       vsync: this,
       alignment: FractionalOffset.topLeft,
-      child: Semantics(
-        button: true,
-        value: "Shopping cart",
-        child: WillPopScope(
-          onWillPop: _onWillPop,
-          child: SlideTransition(
-            position: offsetRect,
-            child: GestureDetector(
-              behavior: HitTestBehavior.opaque,
-              onTap: open,
-              child: ScopedModelDescendant<AppStateModel>(
-                builder: (context, child, model) => AnimatedBuilder(
-                      builder: _buildCart,
-                      animation: _controller,
-                    ),
-              ),
+      child: WillPopScope(
+        onWillPop: _onWillPop,
+        child: SlideTransition(
+          position: offsetRect,
+          child: GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: open,
+            child: ScopedModelDescendant<AppStateModel>(
+              builder: (context, child, model) => AnimatedBuilder(
+                    builder: _buildCart,
+                    animation: _controller,
+                  ),
             ),
           ),
         ),
