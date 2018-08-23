@@ -17,7 +17,6 @@ import 'package:scoped_model/scoped_model.dart';
 import 'package:intl/intl.dart';
 
 import 'model/app_state_model.dart';
-import 'model/data.dart';
 import 'package:Shrine/model/product.dart';
 import 'package:Shrine/supplemental/asymmetric_view.dart';
 import 'backdrop.dart';
